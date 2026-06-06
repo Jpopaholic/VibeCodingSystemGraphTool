@@ -265,7 +265,7 @@ function WorkspaceDashboard() {
       <div className="side-panel right" style={{ width: '380px' }}>
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
           {/* Node Editor */}
-          <NodeEditor activeNode={activeNode} />
+          <NodeEditor activeNode={activeNode} onDeleteNode={() => setSelectedNodeId(null)} />
           
           {/* Nudge Indicator */}
           {activeNode && activeNudges && (

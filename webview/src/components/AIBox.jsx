@@ -119,6 +119,53 @@ Please output the raw JSON text directly (no markdown packaging, just pure JSON)
 
 請直接輸出完整的 JSON 字串內容（不要 markdown 包裝，直接純 JSON）。`;
 
+  // 3. Language-aware Add Feature Prompt template generator
+  const getAddFeaturePrompt = (feature) => {
+    const currentGraphJSON = JSON.stringify({
+      glossary: glossary || {},
+      globalConstraints: globalConstraints || [],
+      nodes: nodes || []
+    }, null, 2);
+
+    return language === 'en'
+      ? `Please act as a software architecture expert. We want to "add a new feature" to our existing system. Please help design and plan the changes, and output the updated and complete \`system-graph.json\` JSON content.
+
+Our current system graph contract (\`system-graph.json\`) is:
+\`\`\`json
+${currentGraphJSON}
+\`\`\`
+
+The new feature description we want to add is:
+"${feature}"
+
+Please perform the following tasks:
+1. Assess the impact of the new feature on the existing architecture.
+2. If necessary, create new component nodes (nodes) specifying \`id\`, \`name\`, \`produce\`, \`vibeNotes\`, and design their \`synthesis\` (\`filePath\`, \`intentSignal\`, and \`extractedConstraints\`).
+3. Set or update the relationships and dependencies between nodes (\`dependencies\`).
+4. Append any new business terms or schemas to the \`glossary\`.
+5. Keep existing unrelated nodes intact.
+
+Please output the raw JSON text directly (no markdown packaging, just pure JSON).`
+      : `請作為軟體架構規劃專家。我們要在現有的系統中「新增一個新功能」，請協助設計與規劃，並為我輸出更新後的完整 \`system-graph.json\` JSON 內容。
+
+我們現有的系統架構契約 (\`system-graph.json\`) 如下：
+\`\`\`json
+${currentGraphJSON}
+\`\`\`
+
+使用者想要新增的功能描述為：
+「${feature}」
+
+請執行以下規劃任務：
+1. 評估該功能對現有架構的影響。
+2. 如果需要，請新增組件節點（nodes），設定其 \`id\`、\`name\`、\`produce\`、\`vibeNotes\`，並規劃合適的 \`synthesis\`（路徑 \`filePath\`、意圖 \`intentSignal\` 與 \`extractedConstraints\`）。
+3. 建立或更新節點之間的依賴關係（\`dependencies\`）。
+4. 在 \`glossary\` 中加入新增功能涉及的核心名詞與資料結構。
+5. 保持現有與此功能無關的節點不變。
+
+請直接輸出完整且有效的 \`system-graph.json\` 純 JSON 內容（不要使用 markdown 區塊包裹，直接輸出 JSON 內容）。`;
+  };
+
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     const notification = document.createElement('div');
@@ -227,6 +274,26 @@ Please output the raw JSON text directly (no markdown packaging, just pure JSON)
                   onClick={() => copyToClipboard(syncPrompt)}
                 >
                   {t('btnSyncPrompt')}
+                </button>
+                {/* Add New Feature Prompt Button */}
+                <button 
+                  className="btn" 
+                  style={{ 
+                    fontSize: '0.78rem', 
+                    padding: '10px 14px', 
+                    background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' 
+                  }}
+                  onClick={async () => {
+                    const feature = await showPrompt(
+                      language === 'en' ? 'Describe the new feature to add:' : '請描述要新增的新功能：',
+                      language === 'en' ? 'e.g. Add user comments to each note' : '例如：在每篇筆記下方加入使用者評論'
+                    );
+                    if (feature) {
+                      copyToClipboard(getAddFeaturePrompt(feature));
+                    }
+                  }}
+                >
+                  {t('btnNewFeaturePrompt')}
                 </button>
                 {/* Import / Paste Graph JSON Button */}
                 <button 

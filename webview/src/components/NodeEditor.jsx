@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
 
-export default function NodeEditor({ activeNode }) {
+export default function NodeEditor({ activeNode, onDeleteNode }) {
   const { 
     nodes: graphNodes, 
     updateNode, 
     openFile,
     language,
     t,
-    showConfirm
+    showConfirm,
+    deleteNode
   } = useWorkspace();
 
   const [name, setName] = useState('');
@@ -127,6 +128,21 @@ export default function NodeEditor({ activeNode }) {
       dependencies: (activeNode.dependencies || []).filter(id => id !== depId)
     };
     updateNode(updatedNode);
+  };
+
+  // Handle deleting this node
+  const handleDeleteNode = async () => {
+    const warningMsg = language === 'en'
+      ? `Warning: Deleting the node "${activeNode.name}" will permanently remove it and all of its incoming/outgoing dependencies. This action cannot be undone. Are you sure you want to delete it?`
+      : `警告：刪除節點「${activeNode.name}」將會永久移除該節點及其所有相依關係（連線）。此動作無法復原，您確定要刪除嗎？`;
+
+    const proceed = await showConfirm(warningMsg);
+    if (proceed) {
+      deleteNode(activeNode.id);
+      if (onDeleteNode) {
+        onDeleteNode();
+      }
+    }
   };
 
   const isOverridden = activeNode.synthesis?.userOverridden;
@@ -374,6 +390,24 @@ export default function NodeEditor({ activeNode }) {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Delete Node Section */}
+        <div style={{ marginTop: '24px', borderTop: '1px solid var(--panel-border)', paddingTop: '20px' }}>
+          <button 
+            className="btn" 
+            style={{ 
+              width: '100%', 
+              background: 'rgba(239, 68, 68, 0.08)', 
+              color: '#ef4444', 
+              border: '1px solid rgba(239, 68, 68, 0.3)', 
+              boxShadow: 'none',
+              padding: '10px'
+            }}
+            onClick={handleDeleteNode}
+          >
+            🗑️ {t('deleteNodeBtn')}
+          </button>
         </div>
       </div>
     </div>

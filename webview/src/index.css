@@ -428,7 +428,7 @@ body {
 .graph-controls {
   position: absolute;
   bottom: 20px;
-  left: 20px;
+  left: 70px;
   display: flex;
   gap: 8px;
   background: var(--panel-bg);

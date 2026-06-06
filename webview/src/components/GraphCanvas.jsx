@@ -45,7 +45,9 @@ export default function GraphCanvas({
     deleteNode, 
     updateDependencies,
     language,
-    t
+    t,
+    showConfirm,
+    showPrompt
   } = useWorkspace();
 
   // 1. Calculate Progression Nudge (💡 推薦開發的底層節點)
@@ -191,11 +193,18 @@ export default function GraphCanvas({
     updateDependencies(target, [...existingDeps, source]);
   }, [graphNodes, updateDependencies]);
 
-  const handleAddNewNode = () => {
+  const handleAddNewNode = async () => {
+    const warningMsg = language === 'en'
+      ? "Warning: Adding a node will modify your system graph structure and establish new dependencies. Do you want to proceed?"
+      : "警告：新增節點將會修改您的系統架構圖結構並建立新的相依關係。您確定要繼續嗎？";
+
+    const proceed = await showConfirm(warningMsg);
+    if (!proceed) return;
+
     const namePlaceholder = language === 'en' ? 'e.g. API Service' : '例如: API Service';
-    const name = prompt(t('nodeNamePrompt'), namePlaceholder);
+    const name = await showPrompt(t('nodeNamePrompt'), namePlaceholder);
     if (!name) return;
-    const produce = prompt(t('nodeProducePrompt'), 'stores notes locally');
+    const produce = await showPrompt(t('nodeProducePrompt'), 'stores notes locally');
     if (!produce) return;
     const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `node-${Date.now()}`;
     addNode({ id, name, produce });
@@ -219,6 +228,11 @@ export default function GraphCanvas({
         <Background color="#2a2a35" gap={20} size={1} />
         <Controls showInteractive={false} />
       </ReactFlow>
+      <div className="graph-controls">
+        <button className="control-btn" onClick={handleAddNewNode}>
+          <span>➕</span> {t('addNodeBtn')}
+        </button>
+      </div>
     </div>
   );
 }
