@@ -134,7 +134,7 @@ export default function GraphCanvas({
       const y = 60 + lvl * 180;
 
       const status = node.synthesis?.status || 'todo';
-      const isNudge = nudgeNodeIds.includes(node.id);
+      const isNudge = nudgeNodeIds?.includes(node.id);
 
       return {
         id: node.id,

@@ -330,7 +330,16 @@ export function WorkspaceProvider({ children }) {
 
   const importGraphJSON = async (jsonString) => {
     try {
-      const parsed = JSON.parse(jsonString);
+      // Strip possible markdown code fences or surrounding text
+      let cleaned = jsonString.trim();
+      // Remove leading/trailing backticks or ```json fences
+      if (cleaned.startsWith('```')) {
+        const endIdx = cleaned.lastIndexOf('```');
+        cleaned = cleaned.substring(3, endIdx).trim();
+      }
+      // If still contains code fences, remove them
+      cleaned = cleaned.replace(/^\s*json\s*\n/, '').replace(/\n\s*json\s*$/i, '').trim();
+      const parsed = JSON.parse(cleaned);
       if (!parsed.nodes && !parsed.glossary && !parsed.globalConstraints) {
         throw new Error(t('invalidGraphJsonErr', { msg: 'Missing nodes, glossary or globalConstraints' }));
       }

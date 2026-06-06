@@ -16,6 +16,7 @@ function WorkspaceDashboard() {
     setNodes, 
     saveGraph,
     language,
+    setLanguage,
     t,
     showPrompt,
     showAlert,
@@ -38,8 +39,8 @@ function WorkspaceDashboard() {
     const completedNodeIds = new Set(
       nodes.filter(n => n.synthesis?.status === 'completed').map(n => n.id)
     );
-    const deps = activeNode.dependencies || [];
-    const status = activeNode.synthesis?.status || 'todo';
+    const deps = activeNode?.dependencies || [];
+    const status = activeNode?.synthesis?.status || 'todo';
 
     if (status !== 'completed' && deps.length > 0) {
       const uncompletedDeps = deps.filter(id => !completedNodeIds.has(id));
@@ -55,7 +56,7 @@ function WorkspaceDashboard() {
     }
 
     // Nudge 2: Connection Nudge (highlight UI nodes)
-    if (activeNode.id.includes('ui') || activeNode.name.includes('UI') || activeNode.name.includes('介面')) {
+    if (activeNode && (activeNode.id?.includes('ui') || activeNode.name?.includes('UI') || activeNode.name?.includes('介面'))) {
       if (deps.length === 0) {
         nudges.push({
           type: 'connection',
@@ -65,7 +66,7 @@ function WorkspaceDashboard() {
     }
 
     // Nudge 3: Glossary Nudge (highlight glossary definitions matching vibeNotes text)
-    const rawNotes = (activeNode.vibeNotes || '').toLowerCase();
+    const rawNotes = (activeNode?.vibeNotes || '').toLowerCase();
     const glossaryKeys = Object.keys(glossary);
     const matchedKeys = glossaryKeys.filter(k => 
       k.length > 2 && rawNotes.includes(k.toLowerCase())
@@ -164,6 +165,27 @@ function WorkspaceDashboard() {
     return (
       <div className="welcome-screen">
         <div className="welcome-card">
+          {/* Language selector — top right */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              style={{
+                background: 'rgba(0,0,0,0.3)',
+                border: '1px solid var(--panel-border)',
+                color: 'var(--text-main)',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                padding: '3px 8px',
+                outline: 'none',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-sans)',
+              }}
+            >
+              <option value="zh-TW">繁中</option>
+              <option value="en">EN</option>
+            </select>
+          </div>
           <div className="logo-container">
             <h1 className="logo-text">{t('welcomeTitle')}</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '6px', fontStyle: 'italic' }}>
@@ -181,7 +203,9 @@ function WorkspaceDashboard() {
               onClick={async () => {
                 const goal = await showPrompt(t('promptGoalPrompt'), '例如：做一個結合 IndexedDB 存檔的 Markdown 編輯器，且能匯出 PDF');
                 if (goal) {
-                  const bootstrapPrompt = `請作為軟體架構規劃專家，分析我接下來要建造的系統想法。我希望在專案根目錄下建立一個 \`system-graph.json\` 檔案。請規劃 glossary、globalConstraints、與 nodes 並輸出為純 JSON 格式：\n\n我的系統願景是：${goal}`;
+                  const bootstrapPrompt = language === 'en'
+                    ? `Please act as a software architecture expert, analyzing my system vision described below. \nI want to create a \`system-graph.json\` file in my project root directory. This file is our contract for co-development.\nPlease plan three sections and output in raw JSON format (no markdown code blocks, just raw JSON text):\n\n1. "glossary": { "Term": "definition and data structure model description" }, extracting key business entities.\n2. "globalConstraints": [ "global system constraints (e.g. tech stack, layout style)" ].\n3. "nodes": [\n     {\n       "id": "unique-english-id (e.g., auth-helper)",\n       "name": "Component Name",\n       "produce": "What does this produce? starting with active verb (e.g. stores sessions locally)",\n       "vibeNotes": "Supplementary developer memos for this node",\n       "dependencies": [ "array of dependent node ids" ],\n       "synthesis": {\n         "filePath": "recommended file path (e.g., src/utils/auth.js)",\n         "status": "todo",\n         "intentSignal": "distilled clean core implementation goal",\n         "extractedConstraints": [ "distilled technical constraints from notes (e.g., no external packages)" ],\n         "userOverridden": false\n       },\n       "trace": { "stale": false, "lastImplementedPrompt": "" }\n     }\n   ]\n\nThe JSON must strictly follow this schema. Any missing fields will cause import errors.\n\nMy system vision is:\n${goal}`
+                    : `請作為軟體架構規劃專家，分析我接下來要建造的系統想法。\n我希望在專案根目錄下建立一個 \`system-graph.json\` 檔案。這個檔案是我們協同開發的唯一契約。\n請為我規劃以下三個部分，並輸出為純 JSON 格式（不要包含任何 markdown 標記或 \`\`\`json 區塊，直接輸出 JSON 內容）：\n\n1. "glossary": { "名詞": "定義與資料結構模型說明" }，提取系統的核心業務實體名詞。\n2. "globalConstraints": [ "全域系統約束條件（如技術棧、排版風格）" ]。\n3. "nodes": [\n     {\n       "id": "唯一的英文識別碼（例如 auth-helper）",\n       "name": "中文組件名稱",\n       "produce": "以主動動詞說明它產出什麼成果（例如 stores sessions locally）",\n       "vibeNotes": "該組件的補充說明備忘",\n       "dependencies": [ "依賴的其他 node id 陣列" ],\n       "synthesis": {\n         "filePath": "建議的實體檔案存放路徑（例如 src/utils/auth.js）",\n         "status": "todo",\n         "intentSignal": "精煉後的乾淨核心實作目的",\n         "extractedConstraints": [ "從說明中提煉出的具體技術規範（如不能用第三方庫）" ]\n       },\n       "trace": { "stale": false, "lastImplementedPrompt": "" }\n     }\n   ]\n\nJSON 必須嚴格符合此 schema，缺少任何欄位都會導致匯入失敗。\n\n我的系統功能願景是：\n${goal}`;
                   navigator.clipboard.writeText(bootstrapPrompt);
                   await showAlert(t('promptCopiedAlert'));
                 }
@@ -266,6 +290,7 @@ function WorkspaceDashboard() {
     </div>
   );
 }
+
 
 export default function App() {
   return (

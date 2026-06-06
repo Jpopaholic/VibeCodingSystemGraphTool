@@ -2,6 +2,19 @@ import React, { useState } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
 
 export default function AIBox() {
+  // Keyboard shortcut: Ctrl+Shift+I to open Init Prompt
+  React.useEffect(() => {
+    const handler = async (e) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) {
+        e.preventDefault();
+        const goal = await showPrompt(t('askGoalPrompt'), language === 'en' ? 'e.g. A Markdown editor with local save and PDF export' : '例如：做一個結合 IndexedDB 存檔的 Markdown 編輯器，且能匯出 PDF');
+        if (goal) copyToClipboard(getBootstrapPrompt(goal));
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   const { 
     nodes,
     glossary, 
@@ -22,7 +35,7 @@ export default function AIBox() {
   const [newConstraint, setNewConstraint] = useState('');
 
   // 1. Language-aware Bootstrap Prompt templates
-  const bootstrapPrompt = language === 'en'
+  const getBootstrapPrompt = (goal) => language === 'en'
     ? `Please act as a software architecture expert, analyzing my system vision described below. 
 I want to create a \`system-graph.json\` file in my project root directory. This file is our contract for co-development.
 Please plan three sections and output in raw JSON format (no markdown code blocks, just raw JSON text):
@@ -40,14 +53,17 @@ Please plan three sections and output in raw JSON format (no markdown code block
          "filePath": "recommended file path (e.g., src/utils/auth.js)",
          "status": "todo",
          "intentSignal": "distilled clean core implementation goal",
-         "extractedConstraints": [ "distilled technical constraints from notes (e.g., no external packages)" ]
+         "extractedConstraints": [ "distilled technical constraints from notes (e.g., no external packages)" ],
+         "userOverridden": false
        },
        "trace": { "stale": false, "lastImplementedPrompt": "" }
      }
    ]
 
+The JSON must strictly follow this schema. Any missing fields will cause import errors.
+
 My system vision is:
-`
+${goal}`
     : `請作為軟體架構規劃專家，分析我接下來要建造的系統想法。
 我希望在專案根目錄下建立一個 \`system-graph.json\` 檔案。這個檔案是我們協同開發的唯一契約。
 請為我規劃以下三個部分，並輸出為純 JSON 格式（不要包含任何 markdown 標記或 \`\`\`json 區塊，直接輸出 JSON 內容）：
@@ -245,7 +261,7 @@ Please output the raw JSON text directly (no markdown packaging, just pure JSON)
                   }}
                   onClick={async () => {
                     const goal = await showPrompt(t('askGoalPrompt'), language === 'en' ? 'e.g. A Markdown editor with local save and PDF export' : '例如：做一個結合 IndexedDB 存檔 dung Markdown 編輯器，且能匯出 PDF');
-                    if (goal) copyToClipboard(bootstrapPrompt + goal);
+                    if (goal) copyToClipboard(getBootstrapPrompt(goal));
                   }}
                 >
                   {language === 'en' ? '⚠️ Re-bootstrap Project...' : '⚠️ 重新全新建圖...'}
@@ -259,10 +275,10 @@ Please output the raw JSON text directly (no markdown packaging, just pure JSON)
                   style={{ fontSize: '0.78rem', padding: '10px 14px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
                   onClick={async () => {
                     const goal = await showPrompt(t('askGoalPrompt'), language === 'en' ? 'e.g. A Markdown editor with local save and PDF export' : '例如：做一個結合 IndexedDB 存檔的 Markdown 編輯器，且能匯出 PDF');
-                    if (goal) copyToClipboard(bootstrapPrompt + goal);
+                    if (goal) copyToClipboard(getBootstrapPrompt(goal));
                   }}
                 >
-                  {t('btnInitPrompt')}
+                  {t('btnInitPrompt')} (Ctrl+Shift+I)
                 </button>
                 {/* Secondary Sync Button */}
                 <button 

@@ -11,16 +11,58 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:vibegraph.open"
+    "onCommand:vibegraph.open",
+    "onCommand:vibegraph.bootstrap"
   ],
   "main": "./extension.js",
   "contributes": {
     "commands": [
       {
         "command": "vibegraph.open",
-        "title": "VibeGraph: Open Graph Map"
+        "title": "VibeGraph: Open Graph Map",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "vibegraph.bootstrap",
+        "title": "VibeGraph: Bootstrap Project (產生初始架構)",
+        "icon": "$(sparkle)"
       }
-    ]
+    ],
+    "keybindings": [
+      {
+        "command": "vibegraph.bootstrap",
+        "key": "ctrl+shift+i",
+        "mac": "cmd+shift+i"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        { "command": "vibegraph.open" },
+        { "command": "vibegraph.bootstrap" }
+      ],
+      "editor/title": [
+        {
+          "command": "vibegraph.open",
+          "group": "navigation",
+          "when": "true"
+        },
+        {
+          "command": "vibegraph.bootstrap",
+          "group": "navigation",
+          "when": "true"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "vibegraph.open",
+          "group": "vibegraph@1"
+        },
+        {
+          "command": "vibegraph.bootstrap",
+          "group": "vibegraph@2"
+        }
+      ]
+    }
   },
   "scripts": {
     "webview-install": "cd webview && npm install",
@@ -29,5 +71,8 @@
   },
   "devDependencies": {
     "@types/vscode": "^1.60.0"
+  },
+  "dependencies": {
+    "package": "^1.0.1"
   }
 }

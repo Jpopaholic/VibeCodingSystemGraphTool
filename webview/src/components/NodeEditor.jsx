@@ -135,7 +135,7 @@ export default function NodeEditor({ activeNode }) {
     <div className="side-panel right">
       <div className="panel-header">
         <div className="panel-title">
-          <span>⚙️ {language === 'en' ? 'Node' : '節點'}: {activeNode.name}</span>
+          <span>⚙️ {language === 'en' ? 'Node' : '節點'}: {activeNode?.name || ''}</span>
         </div>
         <span className={`node-badge ${status}`}>{t(status === 'completed' ? 'statusCompleted' : 'statusTodo')}</span>
       </div>
