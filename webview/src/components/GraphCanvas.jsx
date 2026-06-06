@@ -219,26 +219,6 @@ export default function GraphCanvas({
         <Background color="#2a2a35" gap={20} size={1} />
         <Controls showInteractive={false} />
       </ReactFlow>
-
-      {/* Control Buttons */}
-      <div className="graph-controls">
-        <button className="control-btn" onClick={handleAddNewNode}>
-          <span style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>+</span> {t('addNodeBtn')}
-        </button>
-        {selectedNodeId && (
-          <button 
-            className="control-btn" 
-            style={{ color: '#ef4444' }} 
-            onClick={() => {
-              if (confirm(t('deleteNodeConfirm'))) {
-                deleteNode(selectedNodeId);
-              }
-            }}
-          >
-            🗑 {t('deleteNodeBtn')}
-          </button>
-        )}
-      </div>
     </div>
   );
 }
