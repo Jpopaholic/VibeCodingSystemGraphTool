@@ -166,6 +166,145 @@ ${currentGraphJSON}
 請直接輸出完整且有效的 \`system-graph.json\` 純 JSON 內容（不要使用 markdown 區塊包裹，直接輸出 JSON 內容）。`;
   };
 
+  // 4. Language-aware Modify Feature Prompt template generator
+  const getModifyFeaturePrompt = (detail) => {
+    const currentGraphJSON = JSON.stringify({
+      glossary: glossary || {},
+      globalConstraints: globalConstraints || [],
+      nodes: nodes || []
+    }, null, 2);
+
+    return language === 'en'
+      ? `Please act as a software architecture expert. We want to "modify a feature or node" in our existing system. Please help design and plan the changes, and output the updated and complete \`system-graph.json\` JSON content.
+
+Our current system graph contract (\`system-graph.json\`) is:
+\`\`\`json
+${currentGraphJSON}
+\`\`\`
+
+The modifications requested by the user are:
+"${detail}"
+
+Please perform the following tasks:
+1. Assess which nodes, dependencies, vibeNotes, synthesis settings, or glossary entries need to be updated.
+2. Modify the target component nodes. Update their \`produce\`, \`vibeNotes\`, or \`synthesis\` fields as required.
+3. Update relationships/dependencies between nodes if needed.
+4. Keep all other unrelated nodes and definitions intact.
+
+Please output the raw JSON text directly (no markdown packaging, just pure JSON).`
+      : `請作為軟體架構規劃專家。我們要在現有的系統中「修改特定功能或組件」，請協助設計與變更規劃，並為我輸出更新後的完整 \`system-graph.json\` JSON 內容。
+
+我們現有的系統架構契約 (\`system-graph.json\`) 如下：
+\`\`\`json
+${currentGraphJSON}
+\`\`\`
+
+使用者想要的修改細節描述為：
+「${detail}」
+
+請執行以下規劃任務：
+1. 評估該修改對哪些現有節點、依賴關係、Vibe Notes、Synthesis 設定或業務名詞有影響。
+2. 進行目標節點的修改。更新其 \`produce\`（產出描述）、\`vibeNotes\` 或 \`synthesis\`（意圖與技術約束）等欄位。
+3. 如果需要，調整節點之間的相依依賴線（\`dependencies\`）。
+4. 保持其餘與此修改無關的節點、全局約束與業務名詞定義不變。
+
+請直接輸出完整且有效的 \`system-graph.json\` 純 JSON 內容（不要使用 markdown 區塊包裹，直接輸出 JSON 內容）。`;
+  };
+
+  // 5. Language-aware Remove Feature Prompt template generator
+  const getRemoveFeaturePrompt = (target) => {
+    const currentGraphJSON = JSON.stringify({
+      glossary: glossary || {},
+      globalConstraints: globalConstraints || [],
+      nodes: nodes || []
+    }, null, 2);
+
+    return language === 'en'
+      ? `Please act as a software architecture expert. We want to "remove/delete a feature or node" from our existing system. Please help design the clean-up process, and output the updated and complete \`system-graph.json\` JSON content.
+
+Our current system graph contract (\`system-graph.json\`) is:
+\`\`\`json
+${currentGraphJSON}
+\`\`\`
+
+The component or feature target we want to remove is:
+"${target}"
+
+Please perform the following tasks:
+1. Identify the target component node(s) to be removed.
+2. Safely delete those nodes from the \`nodes\` list.
+3. Crucially, clean up all dependency relationships! Cascade-remove the deleted node IDs from the \`dependencies\` arrays of all other remaining nodes.
+4. If there are glossary terms or global constraints that were solely associated with the removed feature, clean them up as well.
+5. Keep other unrelated nodes intact.
+
+Please output the raw JSON text directly (no markdown packaging, just pure JSON).`
+      : `請作為軟體架構規劃專家。我們希望從現有系統中「安全地移除某個功能或組件節點」，請協助進行清理規劃，並為我輸出更新後的完整 \`system-graph.json\` JSON 內容。
+
+我們現有的系統架構契約 (\`system-graph.json\`) 如下：
+\`\`\`json
+${currentGraphJSON}
+\`\`\`
+
+使用者想要移除的組件節點或功能為：
+「${target}」
+
+請執行以下規劃任務：
+1. 確認需要被移除的目標節點。
+2. 從 \`nodes\` 列表中將該節點安全地刪除。
+3. **重要：清理所有依賴關係線！** 檢查其餘所有留下來的節點，若其 \`dependencies\` 陣列中有包含已刪除節點的 ID，請將其一併清除，以防架構產生懸空參考（dangling dependencies）。
+4. 若有僅與該已刪除功能相關的業務名詞（glossary）或全局約束，可一併進行清理。
+5. 保持其餘與此移除無關的節點與定義不變。
+
+請直接輸出完整且有效的 \`system-graph.json\` 純 JSON 內容（不要使用 markdown 區塊包裹，直接輸出 JSON 內容）。`;
+  };
+
+  // 6. Language-aware Refactor Architecture Prompt template generator
+  const getRefactorArchitecturePrompt = (goal) => {
+    const currentGraphJSON = JSON.stringify({
+      glossary: glossary || {},
+      globalConstraints: globalConstraints || [],
+      nodes: nodes || []
+    }, null, 2);
+
+    return language === 'en'
+      ? `Please act as a software architecture expert. We want to "refactor the system architecture" to optimize its structure. Please help plan the refactoring, and output the updated and complete \`system-graph.json\` JSON content.
+
+Our current system graph contract (\`system-graph.json\`) is:
+\`\`\`json
+${currentGraphJSON}
+\`\`\`
+
+The refactoring goals are:
+"${goal}"
+
+Please perform the following tasks:
+1. Re-design the system components to achieve better modularity, separation of concerns, or simpler data flow as requested.
+2. You may merge redundant nodes, split large nodes into smaller, more focused cohesive modules, or rename IDs and file paths.
+3. Clean up and rebuild the dependency tree (\`dependencies\`) between nodes based on the new architecture.
+4. Update the \`glossary\` and \`globalConstraints\` to reflect the refactored design.
+5. Ensure all existing feature goals (produce expectations) are still fully covered by the new node list.
+
+Please output the raw JSON text directly (no markdown packaging, just pure JSON).`
+      : `請作為軟體架構規劃專家。我們希望對現有系統進行「架構重構與優化」，請協助進行重構設計規劃，並為我輸出更新後的完整 \`system-graph.json\` JSON 內容。
+
+我們現有的系統架構契約 (\`system-graph.json\`) 如下：
+\`\`\`json
+${currentGraphJSON}
+\`\`\`
+
+重構目標與細節描述為：
+「${goal}」
+
+請執行以下規劃任務：
+1. 依據重構目標重新編排、設計系統組件，以實現更好的模組化、單一職責或更清晰的資料流向。
+2. 您可以合併冗餘的節點、拆分過於龐大複雜的節點、或更正節點識別碼（ID）與實體檔案路徑（filePath）。
+3. 根據重構後的設計，清理並重建所有節點間的依賴相依樹（\`dependencies樹\`）。
+4. 更新名詞定義表（\`glossary\`）與全局約束（\`globalConstraints\`）以符合新的架構設計。
+5. 確保所有既有功能的產出預期（produce）在新架構中依然被完整覆蓋。
+
+請直接輸出完整且有效的 \`system-graph.json\` 純 JSON 內容（不要使用 markdown 區塊包裹，直接輸出 JSON 內容）。`;
+  };
+
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     const notification = document.createElement('div');
@@ -294,6 +433,66 @@ ${currentGraphJSON}
                   }}
                 >
                   {t('btnNewFeaturePrompt')}
+                </button>
+                {/* Modify Feature Prompt Button */}
+                <button 
+                  className="btn" 
+                  style={{ 
+                    fontSize: '0.78rem', 
+                    padding: '10px 14px', 
+                    background: 'linear-gradient(135deg, #d97706, #b45309)' 
+                  }}
+                  onClick={async () => {
+                    const detail = await showPrompt(
+                      language === 'en' ? 'Describe the feature/detail to modify:' : '請描述要修改的功能或細節：',
+                      language === 'en' ? 'e.g. Change db-helper to support JSON backup' : '例如：將 db-helper 修改為支援匯出備份 JSON 檔案'
+                    );
+                    if (detail) {
+                      copyToClipboard(getModifyFeaturePrompt(detail));
+                    }
+                  }}
+                >
+                  {t('btnModifyFeaturePrompt')}
+                </button>
+                {/* Remove Feature Prompt Button */}
+                <button 
+                  className="btn" 
+                  style={{ 
+                    fontSize: '0.78rem', 
+                    padding: '10px 14px', 
+                    background: 'linear-gradient(135deg, #dc2626, #b91c1c)' 
+                  }}
+                  onClick={async () => {
+                    const target = await showPrompt(
+                      language === 'en' ? 'Which component/feature do you want to remove?' : '請描述要移除的組件或功能：',
+                      language === 'en' ? 'e.g. pdf-exporter' : '例如：pdf-exporter'
+                    );
+                    if (target) {
+                      copyToClipboard(getRemoveFeaturePrompt(target));
+                    }
+                  }}
+                >
+                  {t('btnRemoveFeaturePrompt')}
+                </button>
+                {/* Refactor Architecture Prompt Button */}
+                <button 
+                  className="btn" 
+                  style={{ 
+                    fontSize: '0.78rem', 
+                    padding: '10px 14px', 
+                    background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' 
+                  }}
+                  onClick={async () => {
+                    const goal = await showPrompt(
+                      language === 'en' ? 'Describe your architecture refactoring goals:' : '請描述您的架構重構目標：',
+                      language === 'en' ? 'e.g. Decouple modules, merge redundant nodes, optimize data flow' : '例如：解耦現有模組、合併冗餘節點、優化資料流相依關係'
+                    );
+                    if (goal) {
+                      copyToClipboard(getRefactorArchitecturePrompt(goal));
+                    }
+                  }}
+                >
+                  {t('btnRefactorArchitecturePrompt')}
                 </button>
                 {/* Import / Paste Graph JSON Button */}
                 <button 
