@@ -276,6 +276,46 @@ body {
   background-color: var(--bg-primary);
 }
 
+/* Override React Flow Controls */
+.react-flow__controls {
+  background: rgba(20, 20, 32, 0.85);
+  border: 1px solid rgba(147, 51, 234, 0.25);
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: #c084fc;
+  fill: #c084fc;
+  width: 28px;
+  height: 28px;
+  padding: 6px;
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none;
+}
+
+.react-flow__controls-button:hover {
+  background: rgba(147, 51, 234, 0.15);
+  color: #e879f9;
+  fill: #e879f9;
+}
+
+.react-flow__controls-button svg {
+  width: 13px;
+  height: 13px;
+}
+
 .react-flow__node {
   border-radius: 12px;
   font-family: var(--font-sans);
