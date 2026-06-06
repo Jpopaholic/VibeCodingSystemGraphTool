@@ -108,10 +108,9 @@ export const locales = {
     askFilePathPrompt: "AI 代碼中未標註 Path。請輸入要寫入的檔案路徑：",
     applySuccessAlert: "套用成功！代碼已寫入至 ",
     applyFailedAlert: "套用代碼失敗：",
-    compileFailedAlert: "編譯提示詞失敗：",
-    promptActiveNodeTemplate: "\n## 📝 專案中已存在的舊代碼/骨架 (Existing Code/Skeleton)\n該實體檔案在目前專案中已有初步結構或範本，**請在此結構基礎上進行填空與實作**，不可隨意更改已定義好的外部接口或結構：\n```javascript\n{code}\n```\n",
-    promptDepSkeleton: "### ⏳ 待辦的前置組件 (已有結構範本): {name} ({path})\n此組件雖然尚未開發完成，但已有名詞或基本骨架。請遵循此檔案的結構與接口進行整合呼叫：\n```javascript\n{code}\n```",
-    promptImportedTemplate: "\n## 📝 偵測到的外部參考範本/檔案 (Referenced File: {path})\n系統自動偵測到開發隨筆中提及此外部檔案，**請參考其設計或在其基礎上實作**：\n```javascript\n{code}\n```\n",
+    promptActiveNodeTemplate: "\n## 📝 專案中已存在的舊代碼/骨架 (Existing Code/Skeleton)\n該實體檔案在目前專案中已有初步結構或範本，**請在此結構基礎上進行填空與實作**，不可隨意更改已定義好的外部接口或結構：\n```javascript\n// Path: {path}\n```\n",
+    promptDepSkeleton: "### ⏳ 待辦的前置組件 (已有結構範本): {name} ({path})\n此組件雖然尚未開發完成，但已有名詞或基本骨架。請遵循此檔案的結構與接口進行整合呼叫：\n```javascript\n// Path: {path}\n```",
+    promptImportedTemplate: "\n## 📝 偵測到的外部參考範本/檔案 (Referenced File: {path})\n系統自動偵測到開發隨筆中提及此外部檔案，**請參考其設計或在其基礎上實作**：\n```javascript\n// Path: {path}\n```\n",
     askExternalFilePathPrompt: "偵測到您在開發隨筆中提到「外部檔案」，請輸入要匯入的外部檔案路徑（💡 提示：留空則由 AI 自動規劃並生成該外部檔案）：",
 
 
@@ -231,9 +230,9 @@ export const locales = {
     applySuccessAlert: "Applied successfully! Code written to ",
     applyFailedAlert: "Failed to apply code: ",
     compileFailedAlert: "Failed to compile prompt: ",
-    promptActiveNodeTemplate: "\n## 📝 Existing Code / Skeleton in Project\nThis target file already has an existing structure or skeleton in the project. **Please implement and complete the code based on this structure**, preserving its interfaces:\n```javascript\n{code}\n```\n",
-    promptDepSkeleton: "### ⏳ Pending Dependency (Skeleton exists): {name} ({path})\nAlthough this component is not fully completed, a basic skeleton or structure exists. Please follow this file's structure and interfaces to integrate/invoke it:\n```javascript\n{code}\n```",
-    promptImportedTemplate: "\n## 📝 Detected Reference Template/File (Referenced File: {path})\nThe system detected this file mentioned in Vibe Notes. **Please refer to its design or implement code based on it**:\n```javascript\n{code}\n```\n",
+    promptActiveNodeTemplate: "\n## 📝 Existing Code / Skeleton in Project\nThis target file already has an existing structure or skeleton in the project. **Please implement and complete the code based on this structure**, preserving its interfaces:\n```javascript\n// Path: {path}\n```\n",
+    promptDepSkeleton: "### ⏳ Pending Dependency (Skeleton exists): {name} ({path})\nAlthough this component is not fully completed, a basic skeleton or structure exists. Please follow this file's structure and interfaces to integrate/invoke it:\n```javascript\n// Path: {path}\n```",
+    promptImportedTemplate: "\n## 📝 Detected Reference Template/File (Referenced File: {path})\nThe system detected this file mentioned in Vibe Notes. **Please refer to its design or implement code based on it**:\n```javascript\n// Path: {path}\n```\n",
     askExternalFilePathPrompt: "Detected 'external file' reference in your notes. Please enter the file path to import (💡 Tip: Leave blank to let AI automatically design and generate the template for this external file):",
 
 

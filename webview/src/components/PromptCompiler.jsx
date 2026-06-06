@@ -163,11 +163,11 @@ export default function PromptCompiler({ activeNode }) {
         if (language === 'en') {
           if (isCompleted && hasCode) {
             return `### 📦 Completed Dependency: ${depNode.name} (${depPath})
-\x60\x60\x60javascript
-${depCode}
-\x60\x60\x60`;
+\`\`\`javascript
+// Path: ${depPath}
+\`\`\``;
           } else if (hasCode) {
-            return t('promptDepSkeleton', { name: depNode.name, path: depPath, code: depCode });
+            return t('promptDepSkeleton', { name: depNode.name, path: depPath });
           } else {
             return `### ⏳ Pending Dependency: ${depNode.name}
 - Expected output (produce): ${depNode.produce}
@@ -176,11 +176,11 @@ ${depCode}
         } else {
           if (isCompleted && hasCode) {
             return `### 📦 已完成的前置組件: ${depNode.name} (${depPath})
-\x60\x60\x60javascript
-${depCode}
-\x60\x60\x60`;
+\`\`\`javascript
+// Path: ${depPath}
+\`\`\``;
           } else if (hasCode) {
-            return t('promptDepSkeleton', { name: depNode.name, path: depPath, code: depCode });
+            return t('promptDepSkeleton', { name: depNode.name, path: depPath });
           } else {
             return `### ⏳ 待辦的前置組件: ${depNode.name}
 - 預期產出 (produce): ${depNode.produce}
@@ -193,12 +193,12 @@ ${depCode}
       const constraints = (activeNode.synthesis?.extractedConstraints || []).map(c => `- ${c}`).join('\n');
 
       const activeTemplatePrompt = activeNodeCode
-        ? t('promptActiveNodeTemplate', { code: activeNodeCode })
+        ? t('promptActiveNodeTemplate', { path: activeFilePath })
         : '';
 
       // Format imported external templates
       const importedTemplatesPrompt = importedTemplates.map(tmp => {
-        return t('promptImportedTemplate', { path: tmp.path, code: tmp.code });
+        return t('promptImportedTemplate', { path: tmp.path });
       }).join('\n');
 
       // Instructions for template preservation or generation
@@ -342,6 +342,53 @@ ${dependenciesContext || '無前置依賴組件。'}
     }, 2000);
   };
 
+  // Promise-based async file write apply
+  const handleApplyCode = async () => {
+    if (!codeToApply.trim()) {
+      await showAlert(t('noCodeAlert'));
+      return;
+    }
+
+    let resolvedPath = targetPath.trim();
+    if (!resolvedPath) {
+      const pathMatch = codeToApply.match(/(?:\/\/|#)\s*Path:\s*([^\r\n]+)/i);
+      if (pathMatch && pathMatch[1]) {
+        resolvedPath = pathMatch[1].trim();
+        setTargetPath(resolvedPath);
+      } else {
+        const userPath = await showPrompt(t('askFilePathPrompt'), 'src/components/MyComponent.jsx');
+        if (!userPath) return;
+        resolvedPath = userPath.trim();
+        setTargetPath(resolvedPath);
+      }
+    }
+
+    try {
+      // Direct await on file write call (decoupled)
+      const writtenPath = await writeFile(resolvedPath, codeToApply);
+
+      // Successfully written! Update node state (Completed) & save compile history to Trace Layer
+      const updatedNode = {
+        ...activeNode,
+        synthesis: {
+          ...(activeNode.synthesis || {}),
+          filePath: writtenPath,
+          status: 'completed'
+        },
+        trace: {
+          ...(activeNode.trace || {}),
+          lastImplementedPrompt: compiledPrompt || 'Compiled prompt context'
+        }
+      };
+      
+      updateNode(updatedNode);
+      setCodeToApply('');
+      await showAlert(t('applySuccessAlert') + resolvedPath);
+    } catch (err) {
+      await showAlert(t('applyFailedAlert') + err.message);
+    }
+  };
+
   return (
     <div style={{ marginTop: '24px', borderTop: '1px solid var(--panel-border)', paddingTop: '20px' }}>
       <div className="form-label" style={{ color: '#a855f7' }}>{t('compilerTitle')}</div>
@@ -380,7 +427,38 @@ ${dependenciesContext || '無前置依賴組件。'}
         </button>
       )}
 
-      
+      {/* Apply Code Section */}
+      <div className="apply-code-section" style={{ marginTop: '20px', borderTop: '1px solid var(--panel-border)', paddingTop: '20px' }}>
+        <div className="form-label" style={{ color: 'var(--color-success)' }}>{t('applyCodeTitle')}</div>
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: '1.4' }}>
+          {t('applyCodeDesc')}
+        </p>
+        <div className="form-group">
+          <input 
+            type="text" 
+            className="form-input" 
+            placeholder={t('applyPathPlaceholder')}
+            style={{ fontSize: '0.8rem', padding: '6px 10px', marginBottom: '8px' }}
+            value={targetPath}
+            onChange={(e) => setTargetPath(e.target.value)}
+          />
+          <textarea 
+            className="form-input apply-textarea" 
+            placeholder={t('applyTextareaPlaceholder')}
+            style={{ minHeight: '100px', fontSize: '0.75rem', fontFamily: 'monospace' }}
+            value={codeToApply}
+            onChange={(e) => setCodeToApply(e.target.value)}
+          />
+        </div>
+        <button 
+          className="btn" 
+          style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, var(--color-success), #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.2)' }}
+          onClick={handleApplyCode}
+        >
+          {t('btnApplyCode')}
+        </button>
+      </div>
+
     </div>
   );
 }
