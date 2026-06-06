@@ -69,11 +69,22 @@ npm run webview-build
 5. 在此沙盒視窗中開啟一個空的資料夾，按下 `Ctrl+Shift+P` 喚出命令列，執行 `VibeGraph: Open Graph Map`，即可在裡面盡情演練！
 
 ### 3. 正式打包與安裝
-如果您想在個人的 Cursor / VS Code 中 formally 使用此插件：
-1. 確保已安裝 `vsce` 打包工具 (`npm install -g @vscode/vsce`)。
+如果您想在個人的 VS Code 或 Cursor 中正式使用此插件：
+1. 確保已安裝 `vsce` 打包工具（`npm install -g @vscode/vsce`）。
 2. 在專案根目錄執行：
    ```bash
    npm run package
    ```
 3. 這會生成一個安裝包檔案，例如 `vibegraph-0.0.1.vsix`。
-4. 打開您的 Cursor，進入「Extensions」面板，點擊右上角 `...` 選單選擇 **「Install from VSIX...」**，選取該檔案即可安裝完成！
+4. **安裝方法 A：介面安裝**
+   - **VS Code**：開啟 VS Code，進入左側「Extensions (擴充功能)」面板 (`Ctrl+Shift+X`)，點擊面板右上角的 `...` (更多動作) 按鈕，選擇 **「Install from VSIX... (從 VSIX 安裝...)」**，並選取生成的 `.vsix` 檔案。
+   - **Cursor**：開啟 Cursor，進入左側「Extensions」面板，點擊右上角 `...` 選擇 **「Install from VSIX...」**，並選取生成的 `.vsix` 檔案。
+5. **安裝方法 B：命令列安裝 (CLI)**
+   - **VS Code**：在終端機中執行：
+     ```bash
+     code --install-extension vibegraph-0.0.1.vsix
+     ```
+   - **Cursor**：在終端機中執行：
+     ```bash
+     cursor --install-extension vibegraph-0.0.1.vsix
+     ```
