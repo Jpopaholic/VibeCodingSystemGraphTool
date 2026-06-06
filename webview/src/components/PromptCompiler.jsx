@@ -10,7 +10,9 @@ export default function PromptCompiler({ activeNode }) {
     readFiles,
     writeFile,
     language,
-    t
+    t,
+    showPrompt,
+    showAlert
   } = useWorkspace();
 
   const [compiledPrompt, setCompiledPrompt] = useState('');
@@ -181,7 +183,7 @@ ${dependenciesContext || '無前置依賴組件。'}
 
       setCompiledPrompt(promptText);
     } catch (err) {
-      alert(t('compileFailedAlert') + err.message);
+      await showAlert(t('compileFailedAlert') + err.message);
     } finally {
       setIsCompiling(false);
     }
@@ -211,7 +213,7 @@ ${dependenciesContext || '無前置依賴組件。'}
   // Promise-based async file write apply
   const handleApplyCode = async () => {
     if (!codeToApply.trim()) {
-      alert(t('noCodeAlert'));
+      await showAlert(t('noCodeAlert'));
       return;
     }
 
@@ -222,7 +224,7 @@ ${dependenciesContext || '無前置依賴組件。'}
         resolvedPath = pathMatch[1].trim();
         setTargetPath(resolvedPath);
       } else {
-        const userPath = prompt(t('askFilePathPrompt'), 'src/components/MyComponent.jsx');
+        const userPath = await showPrompt(t('askFilePathPrompt'), 'src/components/MyComponent.jsx');
         if (!userPath) return;
         resolvedPath = userPath.trim();
         setTargetPath(resolvedPath);
@@ -249,9 +251,9 @@ ${dependenciesContext || '無前置依賴組件。'}
       
       updateNode(updatedNode);
       setCodeToApply('');
-      alert(t('applySuccessAlert') + writtenPath);
+      await showAlert(t('applySuccessAlert') + writtenPath);
     } catch (err) {
-      alert(t('applyFailedAlert') + err.message);
+      await showAlert(t('applyFailedAlert') + err.message);
     }
   };
 

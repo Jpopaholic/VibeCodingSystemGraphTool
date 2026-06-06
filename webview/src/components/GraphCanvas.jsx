@@ -2,7 +2,9 @@ import React, { useMemo, useCallback } from 'react';
 import { 
   ReactFlow, 
   Background, 
-  Controls
+  Controls,
+  Handle,
+  Position
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useWorkspace } from '../context/WorkspaceContext';
@@ -12,6 +14,9 @@ const CustomNode = ({ data }) => {
   const { name, produce, status, isNudge, t } = data;
   return (
     <div className={`vibegraph-node ${status} ${isNudge ? 'nudge' : ''}`}>
+      {/* Target handle for incoming dependencies */}
+      <Handle type="target" position={Position.Top} style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.1)' }} />
+
       <div className="node-title-container">
         <span className="node-name">{name}</span>
         <span className={`node-badge ${status}`}>{status}</span>
@@ -19,6 +24,9 @@ const CustomNode = ({ data }) => {
       <div className="node-produce" title={produce}>
         {produce || (t ? t('nodeProducePrompt') : 'What does this produce?')}
       </div>
+
+      {/* Source handle for outgoing dependencies */}
+      <Handle type="source" position={Position.Bottom} style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.1)' }} />
     </div>
   );
 };

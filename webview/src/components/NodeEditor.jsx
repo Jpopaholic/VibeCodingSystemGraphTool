@@ -7,7 +7,8 @@ export default function NodeEditor({ activeNode }) {
     updateNode, 
     openFile,
     language,
-    t
+    t,
+    showConfirm
   } = useWorkspace();
 
   const [name, setName] = useState('');
@@ -106,8 +107,8 @@ export default function NodeEditor({ activeNode }) {
   };
 
   // Revert synthesis overrides to AI suggestion
-  const handleResetToAISuggestions = () => {
-    if (confirm(t('resetConfirm'))) {
+  const handleResetToAISuggestions = async () => {
+    if (await showConfirm(t('resetConfirm'))) {
       const updatedNode = {
         ...activeNode,
         synthesis: {

@@ -63,6 +63,7 @@ export function WorkspaceProvider({ children }) {
 
   const glossaryRef = useRef({});
   const constraintsRef = useRef([]);
+  const [modalConfig, setModalConfig] = useState(null);
 
   useEffect(() => {
     glossaryRef.current = glossary;
@@ -280,6 +281,54 @@ export function WorkspaceProvider({ children }) {
     return text;
   };
 
+  const showPrompt = (message, defaultValue = '') => {
+    return new Promise((resolve) => {
+      setModalConfig({
+        type: 'prompt',
+        message,
+        defaultValue,
+        onConfirm: (val) => {
+          setModalConfig(null);
+          resolve(val);
+        },
+        onCancel: () => {
+          setModalConfig(null);
+          resolve(null);
+        }
+      });
+    });
+  };
+
+  const showConfirm = (message) => {
+    return new Promise((resolve) => {
+      setModalConfig({
+        type: 'confirm',
+        message,
+        onConfirm: () => {
+          setModalConfig(null);
+          resolve(true);
+        },
+        onCancel: () => {
+          setModalConfig(null);
+          resolve(false);
+        }
+      });
+    });
+  };
+
+  const showAlert = (message) => {
+    return new Promise((resolve) => {
+      setModalConfig({
+        type: 'alert',
+        message,
+        onConfirm: () => {
+          setModalConfig(null);
+          resolve();
+        }
+      });
+    });
+  };
+
   return (
     <WorkspaceContext.Provider value={{
       isInitialized,
@@ -302,9 +351,80 @@ export function WorkspaceProvider({ children }) {
       setGlossary,
       setGlobalConstraints,
       setNodes,
-      saveGraph
+      saveGraph,
+      showPrompt,
+      showConfirm,
+      showAlert
     }}>
       {children}
+      {modalConfig && <CustomModal {...modalConfig} language={language} />}
     </WorkspaceContext.Provider>
+  );
+}
+
+function CustomModal({ type, message, defaultValue, onConfirm, onCancel, language }) {
+  const [value, setValue] = useState(defaultValue || '');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, []);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSubmit();
+    } else if (e.key === 'Escape') {
+      if (onCancel) onCancel();
+    }
+  };
+
+  const handleSubmit = () => {
+    if (type === 'prompt') {
+      onConfirm(value);
+    } else {
+      onConfirm();
+    }
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-card">
+        <div className="modal-message" style={{ whiteSpace: 'pre-line' }}>{message}</div>
+        
+        {type === 'prompt' && (
+          <input 
+            ref={inputRef}
+            type="text" 
+            className="form-input" 
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            style={{ width: '100%', fontSize: '0.9rem' }}
+          />
+        )}
+        
+        <div className="modal-actions">
+          {onCancel && (
+            <button 
+              className="btn" 
+              style={{ background: '#374151', padding: '8px 16px', fontSize: '0.85rem', boxShadow: 'none' }}
+              onClick={onCancel}
+            >
+              {language === 'en' ? 'Cancel' : '取消'}
+            </button>
+          )}
+          <button 
+            className="btn" 
+            style={{ padding: '8px 20px', fontSize: '0.85rem' }}
+            onClick={handleSubmit}
+          >
+            {language === 'en' ? 'Confirm' : '確定'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

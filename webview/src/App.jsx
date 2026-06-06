@@ -16,7 +16,9 @@ function WorkspaceDashboard() {
     setNodes, 
     saveGraph,
     language,
-    t
+    t,
+    showPrompt,
+    showAlert
   } = useWorkspace();
 
   const [selectedNodeId, setSelectedNodeId] = useState(null);
@@ -175,12 +177,12 @@ function WorkspaceDashboard() {
             <button 
               className="btn" 
               style={{ padding: '16px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
-              onClick={() => {
-                const goal = prompt(t('promptGoalPrompt'), '例如：做一個結合 IndexedDB 存檔的 Markdown 編輯器，且能匯出 PDF');
+              onClick={async () => {
+                const goal = await showPrompt(t('promptGoalPrompt'), '例如：做一個結合 IndexedDB 存檔的 Markdown 編輯器，且能匯出 PDF');
                 if (goal) {
                   const bootstrapPrompt = `請作為軟體架構規劃專家，分析我接下來要建造的系統想法。我希望在專案根目錄下建立一個 \`system-graph.json\` 檔案。請規劃 glossary、globalConstraints、與 nodes 並輸出為純 JSON 格式：\n\n我的系統願景是：${goal}`;
                   navigator.clipboard.writeText(bootstrapPrompt);
-                  alert(t('promptCopiedAlert'));
+                  await showAlert(t('promptCopiedAlert'));
                 }
               }}
             >
