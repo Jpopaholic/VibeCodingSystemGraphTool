@@ -1,0 +1,13 @@
+# Dependency directories
+node_modules/
+webview/node_modules/
+
+# Production build output
+webview/dist/
+
+# Packed VS Code Extension file
+*.vsix
+
+# OS metadata files
+.DS_Store
+Thumbs.db

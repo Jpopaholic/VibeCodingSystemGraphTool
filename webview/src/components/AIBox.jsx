@@ -3,13 +3,15 @@ import { useWorkspace } from '../context/WorkspaceContext';
 
 export default function AIBox() {
   const { 
+    nodes,
     glossary, 
     updateGlossary, 
     globalConstraints, 
     updateGlobalConstraints,
     language,
     setLanguage,
-    t
+    t,
+    showPrompt
   } = useWorkspace();
 
   const [newKey, setNewKey] = useState('');
@@ -199,23 +201,65 @@ Please output the raw JSON text directly (no markdown packaging, just pure JSON)
             {t('aiToolkitDesc')}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <button 
-              className="btn" 
-              style={{ fontSize: '0.78rem', padding: '10px 14px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
-              onClick={() => {
-                const goal = prompt(t('askGoalPrompt'), language === 'en' ? 'e.g. A Markdown editor with local save and PDF export' : '例如：做一個結合 IndexedDB 存檔的 Markdown 編輯器，且能匯出 PDF');
-                if (goal) copyToClipboard(bootstrapPrompt + goal);
-              }}
-            >
-              {t('btnInitPrompt')}
-            </button>
-            <button 
-              className="btn" 
-              style={{ fontSize: '0.78rem', padding: '10px 14px', background: 'linear-gradient(135deg, #059669, #0d9488)' }}
-              onClick={() => copyToClipboard(syncPrompt)}
-            >
-              {t('btnSyncPrompt')}
-            </button>
+            {nodes && nodes.length > 0 ? (
+              <>
+                {/* Primary Sync Button */}
+                <button 
+                  className="btn" 
+                  style={{ fontSize: '0.78rem', padding: '10px 14px', background: 'linear-gradient(135deg, #059669, #0d9488)' }}
+                  onClick={() => copyToClipboard(syncPrompt)}
+                >
+                  {t('btnSyncPrompt')}
+                </button>
+                {/* Secondary Warning Bootstrap Button */}
+                <button 
+                  className="btn" 
+                  style={{ 
+                    fontSize: '0.75rem', 
+                    padding: '8px 14px', 
+                    background: 'rgba(255,255,255,0.03)', 
+                    border: '1px dashed rgba(168, 85, 247, 0.4)', 
+                    color: '#c084fc',
+                    boxShadow: 'none' 
+                  }}
+                  onClick={async () => {
+                    const goal = await showPrompt(t('askGoalPrompt'), language === 'en' ? 'e.g. A Markdown editor with local save and PDF export' : '例如：做一個結合 IndexedDB 存檔 dung Markdown 編輯器，且能匯出 PDF');
+                    if (goal) copyToClipboard(bootstrapPrompt + goal);
+                  }}
+                >
+                  {language === 'en' ? '⚠️ Re-bootstrap Project...' : '⚠️ 重新全新建圖...'}
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Primary Bootstrap Button */}
+                <button 
+                  className="btn" 
+                  style={{ fontSize: '0.78rem', padding: '10px 14px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
+                  onClick={async () => {
+                    const goal = await showPrompt(t('askGoalPrompt'), language === 'en' ? 'e.g. A Markdown editor with local save and PDF export' : '例如：做一個結合 IndexedDB 存檔的 Markdown 編輯器，且能匯出 PDF');
+                    if (goal) copyToClipboard(bootstrapPrompt + goal);
+                  }}
+                >
+                  {t('btnInitPrompt')}
+                </button>
+                {/* Secondary Sync Button */}
+                <button 
+                  className="btn" 
+                  style={{ 
+                    fontSize: '0.75rem', 
+                    padding: '8px 14px', 
+                    background: 'rgba(255,255,255,0.03)', 
+                    border: '1px dashed rgba(255,255,255,0.1)', 
+                    color: 'var(--text-muted)',
+                    boxShadow: 'none' 
+                  }}
+                  onClick={() => copyToClipboard(syncPrompt)}
+                >
+                  {t('btnSyncPrompt')}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
