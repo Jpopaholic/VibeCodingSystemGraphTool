@@ -9,8 +9,7 @@ import { useWorkspace } from '../context/WorkspaceContext';
 
 // Custom Node wrapper to style and display states
 const CustomNode = ({ data }) => {
-  const { name, produce, status, isNudge } = data;
-  const { t } = useWorkspace();
+  const { name, produce, status, isNudge, t } = data;
   return (
     <div className={`vibegraph-node ${status} ${isNudge ? 'nudge' : ''}`}>
       <div className="node-title-container">
@@ -18,7 +17,7 @@ const CustomNode = ({ data }) => {
         <span className={`node-badge ${status}`}>{status}</span>
       </div>
       <div className="node-produce" title={produce}>
-        {produce || t('nodeProducePrompt')}
+        {produce || (t ? t('nodeProducePrompt') : 'What does this produce?')}
       </div>
     </div>
   );
@@ -137,7 +136,8 @@ export default function GraphCanvas({
           name: node.name, 
           produce: node.produce, 
           status: status,
-          isNudge: isNudge
+          isNudge: isNudge,
+          t: t
         },
         selected: node.id === selectedNodeId
       };

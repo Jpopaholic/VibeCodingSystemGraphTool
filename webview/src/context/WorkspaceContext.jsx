@@ -61,6 +61,17 @@ export function WorkspaceProvider({ children }) {
   const [globalConstraints, setGlobalConstraints] = useState([]);
   const [language, setLanguage] = useState('zh-TW'); // 'zh-TW' or 'en'
 
+  const glossaryRef = useRef({});
+  const constraintsRef = useRef([]);
+
+  useEffect(() => {
+    glossaryRef.current = glossary;
+  }, [glossary]);
+
+  useEffect(() => {
+    constraintsRef.current = globalConstraints;
+  }, [globalConstraints]);
+
   // Store pending request promises using refs to handle asynchronous interops
   const pendingRequests = useRef({});
 
@@ -105,6 +116,43 @@ export function WorkspaceProvider({ children }) {
           }
           setIsInitialized(true);
           break;
+
+        case 'fileSystemEvent': {
+          const { event: fsEvent, filePath: eventPath } = message;
+          const cleanEventPath = eventPath.replace(/\\/g, '/').toLowerCase();
+          
+          setNodes(prevNodes => {
+            let changed = false;
+            const updated = prevNodes.map(node => {
+              const nodePath = node.synthesis?.filePath;
+              if (nodePath) {
+                const cleanNodePath = nodePath.replace(/\\/g, '/').toLowerCase();
+                if (cleanNodePath === cleanEventPath || cleanEventPath.endsWith(cleanNodePath)) {
+                  const newStatus = fsEvent === 'create' ? 'completed' : 'todo';
+                  if (node.synthesis?.status !== newStatus) {
+                    changed = true;
+                    return {
+                      ...node,
+                      synthesis: {
+                        ...(node.synthesis || {}),
+                        status: newStatus
+                      }
+                    };
+                  }
+                }
+              }
+              return node;
+            });
+
+            if (changed) {
+              setTimeout(() => {
+                saveGraph(glossaryRef.current, constraintsRef.current, updated);
+              }, 100);
+            }
+            return updated;
+          });
+          break;
+        }
       }
     };
 

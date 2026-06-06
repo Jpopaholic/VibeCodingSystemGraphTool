@@ -25,6 +25,31 @@ function activate(context) {
 
     panel.webview.html = getWebviewContent(panel.webview, context);
 
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    let watcher;
+    if (workspaceFolders && workspaceFolders.length > 0) {
+      const workspaceRoot = workspaceFolders[0].uri.fsPath;
+      
+      // Initialize file system watcher for real-time file detection
+      watcher = vscode.workspace.createFileSystemWatcher('**/*');
+      
+      const handleFileChange = (uri, eventType) => {
+        const relPath = path.relative(workspaceRoot, uri.fsPath).replace(/\\/g, '/');
+        panel.webview.postMessage({
+          type: 'fileSystemEvent',
+          event: eventType,
+          filePath: relPath
+        });
+      };
+
+      watcher.onDidCreate((uri) => handleFileChange(uri, 'create'));
+      watcher.onDidDelete((uri) => handleFileChange(uri, 'delete'));
+    }
+
+    panel.onDidDispose(() => {
+      if (watcher) watcher.dispose();
+    });
+
     // Handle messages from Webview
     panel.webview.onDidReceiveMessage(
       async (message) => {
@@ -48,6 +73,38 @@ function activate(context) {
                 vscode.window.showErrorMessage('VibeGraph: Error parsing system-graph.json: ' + err.message);
               }
             }
+
+            // Sync node statuses based on physical file presence
+            if (graphData && Array.isArray(graphData.nodes)) {
+              let graphChanged = false;
+              graphData.nodes = graphData.nodes.map(node => {
+                const filePath = node.synthesis?.filePath;
+                if (filePath) {
+                  const fullPath = path.isAbsolute(filePath) ? filePath : path.join(workspaceRoot, filePath);
+                  const fileExists = fs.existsSync(fullPath) && fs.statSync(fullPath).isFile();
+                  const expectedStatus = fileExists ? 'completed' : 'todo';
+                  if (node.synthesis?.status !== expectedStatus) {
+                    graphChanged = true;
+                    return {
+                      ...node,
+                      synthesis: {
+                        ...(node.synthesis || {}),
+                        status: expectedStatus
+                      }
+                    };
+                  }
+                }
+                return node;
+              });
+              if (graphChanged) {
+                try {
+                  fs.writeFileSync(graphPath, JSON.stringify(graphData, null, 2), 'utf8');
+                } catch (e) {
+                  console.error('Failed to sync system-graph.json', e);
+                }
+              }
+            }
+
             // Send init data
             panel.webview.postMessage({
               type: 'init',
