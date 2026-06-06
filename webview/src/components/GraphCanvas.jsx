@@ -130,8 +130,8 @@ export default function GraphCanvas({
       const index = group.indexOf(node.id);
       const count = group.length;
 
-      const x = 350 + (index - (count - 1) / 2) * 240;
-      const y = 60 + lvl * 180;
+      const x = 350 + (index - (count - 1) / 2) * 260;
+      const y = 80 + lvl * 220;
 
       const status = node.synthesis?.status || 'todo';
       const isNudge = nudgeNodeIds?.includes(node.id);
