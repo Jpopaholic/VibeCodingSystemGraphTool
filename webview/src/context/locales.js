@@ -13,6 +13,26 @@ export const locales = {
     pasteJsonPrompt: "請在下方貼上 AI 生成的 system-graph.json 內容：",
     invalidGraphJsonErr: "無效的架構 JSON：{msg}",
     importFailedAlert: "匯入失敗：",
+    diffModalTitle: "系統架構變更摘要",
+    diffModalTitleExternal: "偵測到外部檔案變更",
+    diffApplyBtn: "確認套用 (OK)",
+    diffRevertBtn: "復原變更 (Revert)",
+    diffNoChanges: "沒有偵測到任何架構變更。",
+    diffNodesTitle: "組件節點 (Nodes)",
+    diffGlossaryTitle: "名詞定義 (Glossary)",
+    diffConstraintsTitle: "全局約束 (Global Constraints)",
+    diffAdded: "新增",
+    diffDeleted: "刪除",
+    diffModified: "修改",
+    diffNodeName: "節點名稱",
+    diffNodeProduce: "產出預期",
+    diffNodeVibeNotes: "開發隨筆",
+    diffNodeDeps: "前置依賴",
+    diffNodeFilePath: "檔案路徑",
+    diffNodeStatus: "實作狀態",
+    diffNodeIntent: "精煉意圖",
+    diffNodeExtConstraints: "提取約束",
+
 
     // Left Panel (AIBox)
     panelTitle: "🧠 Vibe 規劃中心",
@@ -89,6 +109,12 @@ export const locales = {
     applySuccessAlert: "套用成功！代碼已寫入至 ",
     applyFailedAlert: "套用代碼失敗：",
     compileFailedAlert: "編譯提示詞失敗：",
+    promptActiveNodeTemplate: "\n## 📝 專案中已存在的舊代碼/骨架 (Existing Code/Skeleton)\n該實體檔案在目前專案中已有初步結構或範本，**請在此結構基礎上進行填空與實作**，不可隨意更改已定義好的外部接口或結構：\n```javascript\n{code}\n```\n",
+    promptDepSkeleton: "### ⏳ 待辦的前置組件 (已有結構範本): {name} ({path})\n此組件雖然尚未開發完成，但已有名詞或基本骨架。請遵循此檔案的結構與接口進行整合呼叫：\n```javascript\n{code}\n```",
+    promptImportedTemplate: "\n## 📝 偵測到的外部參考範本/檔案 (Referenced File: {path})\n系統自動偵測到開發隨筆中提及此外部檔案，**請參考其設計或在其基礎上實作**：\n```javascript\n{code}\n```\n",
+    askExternalFilePathPrompt: "偵測到您在開發隨筆中提到「外部檔案」，請輸入要匯入的外部檔案路徑（💡 提示：留空則由 AI 自動規劃並生成該外部檔案）：",
+
+
 
     // Nudges
     nudgeProgression: "💡 推進提示：前置組件 [{deps}] 尚未完成。先開發它們，能為本組件提供更準確的真實程式碼上下文喔！",
@@ -109,6 +135,26 @@ export const locales = {
     pasteJsonPrompt: "Paste the AI-generated system-graph.json below:",
     invalidGraphJsonErr: "Invalid Graph JSON: {msg}",
     importFailedAlert: "Import failed: ",
+    diffModalTitle: "Architecture Change Summary",
+    diffModalTitleExternal: "External File Change Detected",
+    diffApplyBtn: "OK / Confirm",
+    diffRevertBtn: "Revert Changes",
+    diffNoChanges: "No architecture changes detected.",
+    diffNodesTitle: "Component Nodes (Nodes)",
+    diffGlossaryTitle: "Glossary / Definitions",
+    diffConstraintsTitle: "Global Constraints",
+    diffAdded: "Added",
+    diffDeleted: "Deleted",
+    diffModified: "Modified",
+    diffNodeName: "Name",
+    diffNodeProduce: "Produce",
+    diffNodeVibeNotes: "Vibe Notes",
+    diffNodeDeps: "Dependencies",
+    diffNodeFilePath: "File Path",
+    diffNodeStatus: "Status",
+    diffNodeIntent: "Intent Signal",
+    diffNodeExtConstraints: "Extracted Constraints",
+
 
     // Left Panel (AIBox)
     panelTitle: "🧠 Vibe Planner",
@@ -185,6 +231,12 @@ export const locales = {
     applySuccessAlert: "Applied successfully! Code written to ",
     applyFailedAlert: "Failed to apply code: ",
     compileFailedAlert: "Failed to compile prompt: ",
+    promptActiveNodeTemplate: "\n## 📝 Existing Code / Skeleton in Project\nThis target file already has an existing structure or skeleton in the project. **Please implement and complete the code based on this structure**, preserving its interfaces:\n```javascript\n{code}\n```\n",
+    promptDepSkeleton: "### ⏳ Pending Dependency (Skeleton exists): {name} ({path})\nAlthough this component is not fully completed, a basic skeleton or structure exists. Please follow this file's structure and interfaces to integrate/invoke it:\n```javascript\n{code}\n```",
+    promptImportedTemplate: "\n## 📝 Detected Reference Template/File (Referenced File: {path})\nThe system detected this file mentioned in Vibe Notes. **Please refer to its design or implement code based on it**:\n```javascript\n{code}\n```\n",
+    askExternalFilePathPrompt: "Detected 'external file' reference in your notes. Please enter the file path to import (💡 Tip: Leave blank to let AI automatically design and generate the template for this external file):",
+
+
 
     // Nudges
     nudgeProgression: "💡 Progression Tip: Dependencies [{deps}] are not completed. Building them first provides concrete context for the AI!",

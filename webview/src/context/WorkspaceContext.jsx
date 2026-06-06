@@ -63,6 +63,8 @@ export function WorkspaceProvider({ children }) {
 
   const glossaryRef = useRef({});
   const constraintsRef = useRef([]);
+  const nodesRef = useRef([]);
+  const lastSavedGraphStrRef = useRef('');
   const [modalConfig, setModalConfig] = useState(null);
 
   useEffect(() => {
@@ -73,8 +75,13 @@ export function WorkspaceProvider({ children }) {
     constraintsRef.current = globalConstraints;
   }, [globalConstraints]);
 
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
+
   // Store pending request promises using refs to handle asynchronous interops
   const pendingRequests = useRef({});
+
 
   // 2. Global message routing
   useEffect(() => {
@@ -103,15 +110,24 @@ export function WorkspaceProvider({ children }) {
         case 'init':
           setWorkspaceRoot(message.workspaceRoot);
           if (message.graph) {
-            setGlossary(message.graph.glossary || {});
+            const initGlossary = message.graph.glossary || {};
             let constraints = [];
             if (Array.isArray(message.graph.globalConstraints)) {
               constraints = message.graph.globalConstraints;
             } else if (message.graph.globalConstraints && typeof message.graph.globalConstraints === 'object') {
               constraints = Object.entries(message.graph.globalConstraints).map(([k, v]) => `${k}: ${v}`);
             }
+            const initNodes = message.graph.nodes || [];
+
+            setGlossary(initGlossary);
             setGlobalConstraints(constraints);
-            setNodes(message.graph.nodes || []);
+            setNodes(initNodes);
+
+            lastSavedGraphStrRef.current = JSON.stringify({
+              glossary: initGlossary,
+              globalConstraints: constraints,
+              nodes: initNodes
+            });
           }
           if (message.language) {
             const editorLang = message.language.toLowerCase();
@@ -126,21 +142,61 @@ export function WorkspaceProvider({ children }) {
 
         case 'graphFileChanged':
           if (message.graph) {
-            setGlossary(message.graph.glossary || {});
-            let constraints = [];
-            if (Array.isArray(message.graph.globalConstraints)) {
-              constraints = message.graph.globalConstraints;
-            } else if (message.graph.globalConstraints && typeof message.graph.globalConstraints === 'object') {
-              constraints = Object.entries(message.graph.globalConstraints).map(([k, v]) => `${k}: ${v}`);
+            const incomingConstraints = Array.isArray(message.graph.globalConstraints)
+              ? message.graph.globalConstraints
+              : (message.graph.globalConstraints && typeof message.graph.globalConstraints === 'object')
+                ? Object.entries(message.graph.globalConstraints).map(([k, v]) => `${k}: ${v}`)
+                : [];
+            
+            const incomingGraph = {
+              glossary: message.graph.glossary || {},
+              globalConstraints: incomingConstraints,
+              nodes: message.graph.nodes || []
+            };
+
+            const incomingStr = JSON.stringify(incomingGraph);
+            if (incomingStr === lastSavedGraphStrRef.current) {
+              break;
             }
-            setGlobalConstraints(constraints);
-            setNodes(message.graph.nodes || []);
+
+            // Differentiate external changes
+            lastSavedGraphStrRef.current = incomingStr;
+
+            const oldGraph = {
+              nodes: nodesRef.current,
+              glossary: glossaryRef.current,
+              globalConstraints: constraintsRef.current
+            };
+
+            const diff = getGraphDiff(oldGraph, incomingGraph);
+
+            setGlossary(incomingGraph.glossary);
+            setGlobalConstraints(incomingConstraints);
+            setNodes(incomingGraph.nodes);
+
+            if (diff.hasChanges) {
+              showDiffModal(diff, oldGraph, true);
+            }
           } else {
+            const oldGraph = {
+              nodes: nodesRef.current,
+              glossary: glossaryRef.current,
+              globalConstraints: constraintsRef.current
+            };
+            const incomingGraph = { glossary: {}, globalConstraints: [], nodes: [] };
+            const diff = getGraphDiff(oldGraph, incomingGraph);
+
             setGlossary({});
             setGlobalConstraints([]);
             setNodes([]);
+            lastSavedGraphStrRef.current = '';
+
+            if (diff.hasChanges) {
+              showDiffModal(diff, oldGraph, true);
+            }
           }
           break;
+
 
         case 'graphFileError':
           showAlert(t('importFailedAlert') + message.error);
@@ -193,15 +249,42 @@ export function WorkspaceProvider({ children }) {
 
   // 3. Centralized Save Graph
   const saveGraph = (updatedGlossary, updatedConstraints, updatedNodes) => {
+    const graphData = {
+      glossary: updatedGlossary,
+      globalConstraints: updatedConstraints,
+      nodes: updatedNodes
+    };
+    lastSavedGraphStrRef.current = JSON.stringify(graphData);
     vscode.postMessage({
       command: 'saveGraph',
-      data: {
-        glossary: updatedGlossary,
-        globalConstraints: updatedConstraints,
-        nodes: updatedNodes
-      }
+      data: graphData
     });
   };
+
+  const showDiffModal = (diff, oldGraph, isAutoDetect = false) => {
+    return new Promise((resolve) => {
+      setModalConfig({
+        type: 'diff',
+        diff,
+        oldGraph,
+        isAutoDetect,
+        onConfirm: () => {
+          setModalConfig(null);
+          resolve(true);
+        },
+        onCancel: () => {
+          // Revert!
+          setGlossary(oldGraph.glossary || {});
+          setGlobalConstraints(oldGraph.globalConstraints || []);
+          setNodes(oldGraph.nodes || []);
+          saveGraph(oldGraph.glossary || {}, oldGraph.globalConstraints || [], oldGraph.nodes || []);
+          setModalConfig(null);
+          resolve(false);
+        }
+      });
+    });
+  };
+
 
   const updateGlossary = (newGlossary) => {
     setGlossary(newGlossary);
@@ -330,15 +413,15 @@ export function WorkspaceProvider({ children }) {
 
   const importGraphJSON = async (jsonString) => {
     try {
-      // Strip possible markdown code fences or surrounding text
       let cleaned = jsonString.trim();
-      // Remove leading/trailing backticks or ```json fences
-      if (cleaned.startsWith('```')) {
-        const endIdx = cleaned.lastIndexOf('```');
-        cleaned = cleaned.substring(3, endIdx).trim();
+
+      // Extract only the JSON object by finding the first '{' and last '}'
+      const firstBrace = cleaned.indexOf('{');
+      const lastBrace = cleaned.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        cleaned = cleaned.substring(firstBrace, lastBrace + 1);
       }
-      // If still contains code fences, remove them
-      cleaned = cleaned.replace(/^\s*json\s*\n/, '').replace(/\n\s*json\s*$/i, '').trim();
+
       const parsed = JSON.parse(cleaned);
       if (!parsed.nodes && !parsed.glossary && !parsed.globalConstraints) {
         throw new Error(t('invalidGraphJsonErr', { msg: 'Missing nodes, glossary or globalConstraints' }));
@@ -352,16 +435,36 @@ export function WorkspaceProvider({ children }) {
       }
       const updatedNodes = Array.isArray(parsed.nodes) ? parsed.nodes : [];
 
+      const oldGraph = {
+        nodes: nodesRef.current,
+        glossary: glossaryRef.current,
+        globalConstraints: constraintsRef.current
+      };
+
+      const newGraph = {
+        nodes: updatedNodes,
+        glossary: updatedGlossary,
+        globalConstraints: updatedConstraints
+      };
+
+      const diff = getGraphDiff(oldGraph, newGraph);
+
+      // Apply directly
       setGlossary(updatedGlossary);
       setGlobalConstraints(updatedConstraints);
       setNodes(updatedNodes);
       saveGraph(updatedGlossary, updatedConstraints, updatedNodes);
+
+      if (diff.hasChanges) {
+        showDiffModal(diff, oldGraph, false);
+      }
       return true;
     } catch (err) {
       await showAlert(t('importFailedAlert') + err.message);
       return false;
     }
   };
+
 
   const showConfirm = (message) => {
     return new Promise((resolve) => {
@@ -422,12 +525,13 @@ export function WorkspaceProvider({ children }) {
       importGraphJSON
     }}>
       {children}
-      {modalConfig && <CustomModal {...modalConfig} language={language} />}
+      {modalConfig && <CustomModal {...modalConfig} language={language} t={t} />}
     </WorkspaceContext.Provider>
   );
 }
 
-function CustomModal({ type, message, defaultValue, onConfirm, onCancel, language, multiline }) {
+
+function CustomModal({ type, message, defaultValue, onConfirm, onCancel, language, multiline, diff, isAutoDetect, t }) {
   const [value, setValue] = useState(defaultValue || '');
   const inputRef = useRef(null);
 
@@ -458,8 +562,13 @@ function CustomModal({ type, message, defaultValue, onConfirm, onCancel, languag
 
   return (
     <div className="modal-overlay">
-      <div className="modal-card" style={multiline ? { maxWidth: '600px', width: '90%' } : {}}>
-        <div className="modal-message" style={{ whiteSpace: 'pre-line' }}>{message}</div>
+      <div className="modal-card" style={(multiline || type === 'diff') ? { maxWidth: '600px', width: '90%' } : {}}>
+        <div className="modal-message" style={{ whiteSpace: 'pre-line' }}>
+          {type === 'diff' 
+            ? (isAutoDetect ? t('diffModalTitleExternal') : t('diffModalTitle')) 
+            : message
+          }
+        </div>
         
         {type === 'prompt' && (
           multiline ? (
@@ -495,15 +604,118 @@ function CustomModal({ type, message, defaultValue, onConfirm, onCancel, languag
             />
           )
         )}
+
+        {type === 'diff' && diff && (
+          <div className="diff-modal-container">
+            {/* 1. Nodes */}
+            {(diff.nodeChanges.added.length > 0 || diff.nodeChanges.deleted.length > 0 || diff.nodeChanges.modified.length > 0) && (
+              <div className="diff-section">
+                <div className="diff-section-title">{t('diffNodesTitle')}</div>
+                <div className="diff-list">
+                  {diff.nodeChanges.added.map(node => (
+                    <div className="diff-item added" key={node.id}>
+                      + [{node.id}] {node.name} {node.synthesis?.filePath ? `(${node.synthesis.filePath})` : ''}
+                    </div>
+                  ))}
+                  {diff.nodeChanges.deleted.map(node => (
+                    <div className="diff-item deleted" key={node.id}>
+                      - [{node.id}] {node.name}
+                    </div>
+                  ))}
+                  {diff.nodeChanges.modified.map(mod => (
+                    <div className="diff-item modified" key={mod.id}>
+                      ✎ [{mod.id}] {mod.name}
+                      <div className="diff-modified-details">
+                        {mod.changes.map((ch, idx) => {
+                          const getFieldLabel = (field) => {
+                            switch(field) {
+                              case 'name': return t('diffNodeName');
+                              case 'produce': return t('diffNodeProduce');
+                              case 'vibeNotes': return t('diffNodeVibeNotes');
+                              case 'dependencies': return t('diffNodeDeps');
+                              case 'filePath': return t('diffNodeFilePath');
+                              case 'status': return t('diffNodeStatus');
+                              case 'intentSignal': return t('diffNodeIntent');
+                              case 'extractedConstraints': return t('diffNodeExtConstraints');
+                              default: return field;
+                            }
+                          };
+                          return (
+                            <div className="diff-change-line" key={idx}>
+                              {getFieldLabel(ch.field)}:{' '}
+                              <span className="old-val">{ch.old || '(empty)'}</span>
+                              {' ➔ '}
+                              <span className="new-val">{ch.new || '(empty)'}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 2. Glossary */}
+            {(diff.glossaryChanges.added.length > 0 || diff.glossaryChanges.deleted.length > 0 || diff.glossaryChanges.modified.length > 0) && (
+              <div className="diff-section">
+                <div className="diff-section-title">{t('diffGlossaryTitle')}</div>
+                <div className="diff-list">
+                  {diff.glossaryChanges.added.map(item => (
+                    <div className="diff-item added" key={item.key}>
+                      + {item.key}: {item.value}
+                    </div>
+                  ))}
+                  {diff.glossaryChanges.deleted.map(item => (
+                    <div className="diff-item deleted" key={item.key}>
+                      - {item.key}: {item.value}
+                    </div>
+                  ))}
+                  {diff.glossaryChanges.modified.map(item => (
+                    <div className="diff-item modified" key={item.key}>
+                      ✎ {item.key}:
+                      <div className="diff-modified-details">
+                        <div className="diff-change-line">
+                          <span className="old-val">{item.oldValue || '(empty)'}</span>
+                          {' ➔ '}
+                          <span className="new-val">{item.newValue || '(empty)'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3. Global Constraints */}
+            {(diff.constraintChanges.added.length > 0 || diff.constraintChanges.deleted.length > 0) && (
+              <div className="diff-section">
+                <div className="diff-section-title">{t('diffConstraintsTitle')}</div>
+                <div className="diff-list">
+                  {diff.constraintChanges.added.map((item, idx) => (
+                    <div className="diff-item added" key={idx}>
+                      + {item}
+                    </div>
+                  ))}
+                  {diff.constraintChanges.deleted.map((item, idx) => (
+                    <div className="diff-item deleted" key={idx}>
+                      - {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         
         <div className="modal-actions">
           {onCancel && (
             <button 
               className="btn" 
-              style={{ background: '#374151', padding: '8px 16px', fontSize: '0.85rem', boxShadow: 'none' }}
+              style={{ background: type === 'diff' ? '#ef4444' : '#374151', padding: '8px 16px', fontSize: '0.85rem', boxShadow: 'none' }}
               onClick={onCancel}
             >
-              {language === 'en' ? 'Cancel' : '取消'}
+              {type === 'diff' ? t('diffRevertBtn') : (language === 'en' ? 'Cancel' : '取消')}
             </button>
           )}
           <button 
@@ -511,10 +723,135 @@ function CustomModal({ type, message, defaultValue, onConfirm, onCancel, languag
             style={{ padding: '8px 20px', fontSize: '0.85rem' }}
             onClick={handleSubmit}
           >
-            {language === 'en' ? 'Confirm' : '確定'}
+            {type === 'diff' ? t('diffApplyBtn') : (language === 'en' ? 'Confirm' : '確定')}
           </button>
         </div>
       </div>
     </div>
   );
 }
+
+function getGraphDiff(oldGraph, newGraph) {
+  const oldNodes = oldGraph.nodes || [];
+  const newNodes = newGraph.nodes || [];
+  const oldGlossary = oldGraph.glossary || {};
+  const newGlossary = newGraph.glossary || {};
+  
+  const normalizeConstraints = (c) => {
+    if (Array.isArray(c)) return c;
+    if (c && typeof c === 'object') return Object.entries(c).map(([k, v]) => `${k}: ${v}`);
+    return [];
+  };
+  const oldConstraints = normalizeConstraints(oldGraph.globalConstraints);
+  const newConstraints = normalizeConstraints(newGraph.globalConstraints);
+
+  const nodeChanges = { added: [], deleted: [], modified: [] };
+  const glossaryChanges = { added: [], deleted: [], modified: [] };
+  const constraintChanges = { added: [], deleted: [] };
+
+  const oldNodesMap = new Map(oldNodes.map(n => [n.id, n]));
+  const newNodesMap = new Map(newNodes.map(n => [n.id, n]));
+
+  // Node added & modified
+  for (const [id, node] of newNodesMap.entries()) {
+    if (!oldNodesMap.has(id)) {
+      nodeChanges.added.push(node);
+    } else {
+      const oldNode = oldNodesMap.get(id);
+      const changes = [];
+      
+      if ((oldNode.name || '') !== (node.name || '')) {
+        changes.push({ field: 'name', old: oldNode.name || '', new: node.name || '' });
+      }
+      if ((oldNode.produce || '') !== (node.produce || '')) {
+        changes.push({ field: 'produce', old: oldNode.produce || '', new: node.produce || '' });
+      }
+      if ((oldNode.vibeNotes || '') !== (node.vibeNotes || '')) {
+        changes.push({ field: 'vibeNotes', old: oldNode.vibeNotes || '', new: node.vibeNotes || '' });
+      }
+      
+      const oldDeps = oldNode.dependencies || [];
+      const newDeps = node.dependencies || [];
+      if (JSON.stringify(oldDeps.slice().sort()) !== JSON.stringify(newDeps.slice().sort())) {
+        changes.push({ field: 'dependencies', old: oldDeps.join(', '), new: newDeps.join(', ') });
+      }
+
+      const oldSynth = oldNode.synthesis || {};
+      const newSynth = node.synthesis || {};
+      if ((oldSynth.filePath || '') !== (newSynth.filePath || '')) {
+        changes.push({ field: 'filePath', old: oldSynth.filePath || '', new: newSynth.filePath || '' });
+      }
+      if ((oldSynth.status || '') !== (newSynth.status || '')) {
+        changes.push({ field: 'status', old: oldSynth.status || '', new: newSynth.status || '' });
+      }
+      if ((oldSynth.intentSignal || '') !== (newSynth.intentSignal || '')) {
+        changes.push({ field: 'intentSignal', old: oldSynth.intentSignal || '', new: newSynth.intentSignal || '' });
+      }
+      
+      const oldExt = oldSynth.extractedConstraints || [];
+      const newExt = newSynth.extractedConstraints || [];
+      if (JSON.stringify(oldExt.slice().sort()) !== JSON.stringify(newExt.slice().sort())) {
+        changes.push({ field: 'extractedConstraints', old: oldExt.join(', '), new: newExt.join(', ') });
+      }
+
+      if (changes.length > 0) {
+        nodeChanges.modified.push({
+          id,
+          name: node.name || oldNode.name || id,
+          changes
+        });
+      }
+    }
+  }
+
+  // Node deleted
+  for (const [id, node] of oldNodesMap.entries()) {
+    if (!newNodesMap.has(id)) {
+      nodeChanges.deleted.push(node);
+    }
+  }
+
+  // Glossary
+  for (const [key, value] of Object.entries(newGlossary)) {
+    if (!(key in oldGlossary)) {
+      glossaryChanges.added.push({ key, value });
+    } else if (oldGlossary[key] !== value) {
+      glossaryChanges.modified.push({ key, oldValue: oldGlossary[key], newValue: value });
+    }
+  }
+  for (const [key, value] of Object.entries(oldGlossary)) {
+    if (!(key in newGlossary)) {
+      glossaryChanges.deleted.push({ key, value });
+    }
+  }
+
+  // Constraints
+  for (const c of newConstraints) {
+    if (!oldConstraints.includes(c)) {
+      constraintChanges.added.push(c);
+    }
+  }
+  for (const c of oldConstraints) {
+    if (!newConstraints.includes(c)) {
+      constraintChanges.deleted.push(c);
+    }
+  }
+
+  const hasChanges = 
+    nodeChanges.added.length > 0 ||
+    nodeChanges.deleted.length > 0 ||
+    nodeChanges.modified.length > 0 ||
+    glossaryChanges.added.length > 0 ||
+    glossaryChanges.deleted.length > 0 ||
+    glossaryChanges.modified.length > 0 ||
+    constraintChanges.added.length > 0 ||
+    constraintChanges.deleted.length > 0;
+
+  return {
+    nodeChanges,
+    glossaryChanges,
+    constraintChanges,
+    hasChanges
+  };
+}
+
