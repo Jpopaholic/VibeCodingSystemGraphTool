@@ -8,6 +8,14 @@ const path = require('path');
 function activate(context) {
   console.log('VibeGraph extension is now active!');
 
+  // Create VibeGraph Status Bar Button for quick launch
+  const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  statusBarItem.command = 'vibegraph.open';
+  statusBarItem.text = '$(graph) VibeGraph';
+  statusBarItem.tooltip = 'Open VibeGraph Map Dashboard';
+  statusBarItem.show();
+  context.subscriptions.push(statusBarItem);
+
   let disposable = vscode.commands.registerCommand('vibegraph.open', () => {
     // Create and show Webview Panel
     const panel = vscode.window.createWebviewPanel(

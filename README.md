@@ -1,7 +1,7 @@
 # VibeGraph 🚀
 > Vibe Coding 系統規劃與約束契約地圖 (Visual Constraint Map & Prompt Compiler for Vibe Coding)
 
-VibeGraph 是一個為 **Vibe Coding** 量身打造的 VS Code / Cursor 視覺化規劃插件。它採用「智能微推引導」與「三層架構解耦」，在背後默默協助開發者理清程式碼結構、對齊名詞定義，但**不強制鎖定您的開發流程、不施加工程化條款**，維持 Vibe Coding 的自由與直覺。
+VibeGraph 是一個為 **Vibe Coding** 量身打造的 VS Code 視覺化規劃插件。它採用「智能微推引導」與「三層架構解耦」，在背後默默協助開發者理清程式碼結構、對齊名詞定義，但**不強制鎖定您的開發流程、不施加工程化條款**，維持 Vibe Coding 的自由與直覺。
 
 ---
 
@@ -62,14 +62,14 @@ npm run webview-build
 ```
 
 ### 2. 沙盒偵錯 (沙盒演練)
-1. 用 VS Code / Cursor 開啟本專案資料夾。
+1. 用 VS Code 開啟本專案資料夾。
 2. 切換到左側「Run and Debug」面板 (`Ctrl+Shift+D`)，選擇 **「Launch Extension」**。
 3. 按下 **`F5`** 鍵啟動偵錯。
 4. 系統會自動彈出一個全新的 `[Extension Development Host]` VS Code 視窗。
-5. 在此沙盒視窗中開啟一個空的資料夾，按下 `Ctrl+Shift+P` 喚出命令列，執行 `VibeGraph: Open Graph Map`，即可在裡面盡情演練！
+5. 在此沙盒視窗中開啟一個空的資料夾，您可以在編輯器右下角狀態列直接看到 **`📊 VibeGraph`** 按鈕，點選即可開啟地圖！（亦可按 `Ctrl+Shift+P` 執行 `VibeGraph: Open Graph Map`），即可在裡面盡情演練！
 
 ### 3. 正式打包與安裝
-如果您想在個人的 VS Code 或 Cursor 中正式使用此插件：
+如果您想在個人的 VS Code 或其衍生編輯器 (如 Antigravity IDE 等) 中正式使用此插件：
 1. 確保已安裝 `vsce` 打包工具（`npm install -g @vscode/vsce`）。
 2. 在專案根目錄執行：
    ```bash
@@ -77,14 +77,10 @@ npm run webview-build
    ```
 3. 這會生成一個安裝包檔案，例如 `vibegraph-0.0.1.vsix`。
 4. **安裝方法 A：介面安裝**
-   - **VS Code**：開啟 VS Code，進入左側「Extensions (擴充功能)」面板 (`Ctrl+Shift+X`)，點擊面板右上角的 `...` (更多動作) 按鈕，選擇 **「Install from VSIX... (從 VSIX 安裝...)」**，並選取生成的 `.vsix` 檔案。
-   - **Cursor**：開啟 Cursor，進入左側「Extensions」面板，點擊右上角 `...` 選擇 **「Install from VSIX...」**，並選取生成的 `.vsix` 檔案。
+   - **VS Code 與衍生 IDE**：開啟編輯器，進入左側「Extensions (擴充功能)」面板 (`Ctrl+Shift+X`)，點擊面板右上角的 `...` (更多動作) 按鈕，選擇 **「Install from VSIX... (從 VSIX 安裝...)」**，並選取生成的 `.vsix` 檔案。
+     *(💡 提示：安裝成功後，您可以在編輯器右下角狀態列直接點選 **`📊 VibeGraph`** 按鈕開啟地圖！若部分衍生 IDE，例如本 Antigravity IDE，簡化了介面而找不到左側 Extensions 按鈕，您可直接在編輯器內按下 **`Ctrl+Shift+P`** 喚出命令列，輸入並點選 `Install from VSIX` 進行安裝！)*
 5. **安裝方法 B：命令列安裝 (CLI)**
    - **VS Code**：在終端機中執行：
      ```bash
      code --install-extension vibegraph-0.0.1.vsix
-     ```
-   - **Cursor**：在終端機中執行：
-     ```bash
-     cursor --install-extension vibegraph-0.0.1.vsix
      ```
