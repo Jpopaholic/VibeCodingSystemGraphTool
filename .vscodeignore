@@ -1,0 +1,12 @@
+.vscode/**
+webview/node_modules/**
+webview/src/**
+webview/vite.config.js
+webview/package.json
+webview/package-lock.json
+jsconfig.json
+.gitignore
+.vscodeignore
+task.md
+implementation_plan.md
+walkthrough.md

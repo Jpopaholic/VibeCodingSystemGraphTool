@@ -1,0 +1,33 @@
+{
+  "name": "vibegraph",
+  "displayName": "VibeGraph",
+  "description": "Visual constraint map and prompt compiler for Vibe Coding",
+  "version": "0.0.1",
+  "publisher": "tttff",
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:vibegraph.open"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "vibegraph.open",
+        "title": "VibeGraph: Open Graph Map"
+      }
+    ]
+  },
+  "scripts": {
+    "webview-install": "cd webview && npm install",
+    "webview-build": "cd webview && npm run build",
+    "package": "npm run webview-build && vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.60.0"
+  }
+}
