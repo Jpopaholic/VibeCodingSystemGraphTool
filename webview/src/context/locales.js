@@ -9,6 +9,10 @@ export const locales = {
     loadDemoTemplate: "💡 載入「Markdown 編輯器」範例地圖開始體驗",
     promptGoalPrompt: "請描述您要建造的系統想法：",
     promptCopiedAlert: "✓ 初始提示詞已複製！請貼給 Cursor 的 AI Chat 執行建圖，執行後地圖會自動重載。",
+    importGraphBtn: "匯入 / 貼上系統架構 JSON 📥",
+    pasteJsonPrompt: "請在下方貼上 AI 生成的 system-graph.json 內容：",
+    invalidGraphJsonErr: "無效的架構 JSON：{msg}",
+    importFailedAlert: "匯入失敗：",
 
     // Left Panel (AIBox)
     panelTitle: "🧠 Vibe 規劃中心",
@@ -97,6 +101,10 @@ export const locales = {
     loadDemoTemplate: "💡 Load 'Markdown Editor' Demo Graph",
     promptGoalPrompt: "Describe the system vision you want to build:",
     promptCopiedAlert: "✓ Bootstrap Prompt copied! Paste it in Cursor Chat to generate the graph, the UI will reload automatically.",
+    importGraphBtn: "Import / Paste Graph JSON 📥",
+    pasteJsonPrompt: "Paste the AI-generated system-graph.json below:",
+    invalidGraphJsonErr: "Invalid Graph JSON: {msg}",
+    importFailedAlert: "Import failed: ",
 
     // Left Panel (AIBox)
     panelTitle: "🧠 Vibe Planner",

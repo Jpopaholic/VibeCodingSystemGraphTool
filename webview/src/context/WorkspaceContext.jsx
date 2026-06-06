@@ -104,7 +104,13 @@ export function WorkspaceProvider({ children }) {
           setWorkspaceRoot(message.workspaceRoot);
           if (message.graph) {
             setGlossary(message.graph.glossary || {});
-            setGlobalConstraints(message.graph.globalConstraints || []);
+            let constraints = [];
+            if (Array.isArray(message.graph.globalConstraints)) {
+              constraints = message.graph.globalConstraints;
+            } else if (message.graph.globalConstraints && typeof message.graph.globalConstraints === 'object') {
+              constraints = Object.entries(message.graph.globalConstraints).map(([k, v]) => `${k}: ${v}`);
+            }
+            setGlobalConstraints(constraints);
             setNodes(message.graph.nodes || []);
           }
           if (message.language) {
@@ -116,6 +122,28 @@ export function WorkspaceProvider({ children }) {
             }
           }
           setIsInitialized(true);
+          break;
+
+        case 'graphFileChanged':
+          if (message.graph) {
+            setGlossary(message.graph.glossary || {});
+            let constraints = [];
+            if (Array.isArray(message.graph.globalConstraints)) {
+              constraints = message.graph.globalConstraints;
+            } else if (message.graph.globalConstraints && typeof message.graph.globalConstraints === 'object') {
+              constraints = Object.entries(message.graph.globalConstraints).map(([k, v]) => `${k}: ${v}`);
+            }
+            setGlobalConstraints(constraints);
+            setNodes(message.graph.nodes || []);
+          } else {
+            setGlossary({});
+            setGlobalConstraints([]);
+            setNodes([]);
+          }
+          break;
+
+        case 'graphFileError':
+          showAlert(t('importFailedAlert') + message.error);
           break;
 
         case 'fileSystemEvent': {
@@ -281,12 +309,13 @@ export function WorkspaceProvider({ children }) {
     return text;
   };
 
-  const showPrompt = (message, defaultValue = '') => {
+  const showPrompt = (message, defaultValue = '', multiline = false) => {
     return new Promise((resolve) => {
       setModalConfig({
         type: 'prompt',
         message,
         defaultValue,
+        multiline,
         onConfirm: (val) => {
           setModalConfig(null);
           resolve(val);
@@ -297,6 +326,32 @@ export function WorkspaceProvider({ children }) {
         }
       });
     });
+  };
+
+  const importGraphJSON = async (jsonString) => {
+    try {
+      const parsed = JSON.parse(jsonString);
+      if (!parsed.nodes && !parsed.glossary && !parsed.globalConstraints) {
+        throw new Error(t('invalidGraphJsonErr', { msg: 'Missing nodes, glossary or globalConstraints' }));
+      }
+      const updatedGlossary = parsed.glossary || {};
+      let updatedConstraints = [];
+      if (Array.isArray(parsed.globalConstraints)) {
+        updatedConstraints = parsed.globalConstraints;
+      } else if (parsed.globalConstraints && typeof parsed.globalConstraints === 'object') {
+        updatedConstraints = Object.entries(parsed.globalConstraints).map(([k, v]) => `${k}: ${v}`);
+      }
+      const updatedNodes = Array.isArray(parsed.nodes) ? parsed.nodes : [];
+
+      setGlossary(updatedGlossary);
+      setGlobalConstraints(updatedConstraints);
+      setNodes(updatedNodes);
+      saveGraph(updatedGlossary, updatedConstraints, updatedNodes);
+      return true;
+    } catch (err) {
+      await showAlert(t('importFailedAlert') + err.message);
+      return false;
+    }
   };
 
   const showConfirm = (message) => {
@@ -354,7 +409,8 @@ export function WorkspaceProvider({ children }) {
       saveGraph,
       showPrompt,
       showConfirm,
-      showAlert
+      showAlert,
+      importGraphJSON
     }}>
       {children}
       {modalConfig && <CustomModal {...modalConfig} language={language} />}
@@ -362,19 +418,21 @@ export function WorkspaceProvider({ children }) {
   );
 }
 
-function CustomModal({ type, message, defaultValue, onConfirm, onCancel, language }) {
+function CustomModal({ type, message, defaultValue, onConfirm, onCancel, language, multiline }) {
   const [value, setValue] = useState(defaultValue || '');
   const inputRef = useRef(null);
 
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus();
-      inputRef.current.select();
+      if (!multiline) {
+        inputRef.current.select();
+      }
     }
   }, []);
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !multiline) {
       handleSubmit();
     } else if (e.key === 'Escape') {
       if (onCancel) onCancel();
@@ -391,19 +449,42 @@ function CustomModal({ type, message, defaultValue, onConfirm, onCancel, languag
 
   return (
     <div className="modal-overlay">
-      <div className="modal-card">
+      <div className="modal-card" style={multiline ? { maxWidth: '600px', width: '90%' } : {}}>
         <div className="modal-message" style={{ whiteSpace: 'pre-line' }}>{message}</div>
         
         {type === 'prompt' && (
-          <input 
-            ref={inputRef}
-            type="text" 
-            className="form-input" 
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            style={{ width: '100%', fontSize: '0.9rem' }}
-          />
+          multiline ? (
+            <textarea 
+              ref={inputRef}
+              className="form-input" 
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={12}
+              style={{ 
+                width: '100%', 
+                fontSize: '0.85rem', 
+                minHeight: '220px', 
+                resize: 'vertical',
+                fontFamily: 'monospace',
+                background: 'rgba(0, 0, 0, 0.4)',
+                border: '1px solid var(--panel-border)',
+                color: 'var(--text-main)',
+                borderRadius: '6px',
+                padding: '10px'
+              }}
+            />
+          ) : (
+            <input 
+              ref={inputRef}
+              type="text" 
+              className="form-input" 
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              style={{ width: '100%', fontSize: '0.9rem' }}
+            />
+          )
         )}
         
         <div className="modal-actions">

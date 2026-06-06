@@ -18,7 +18,8 @@ function WorkspaceDashboard() {
     language,
     t,
     showPrompt,
-    showAlert
+    showAlert,
+    importGraphJSON
   } = useWorkspace();
 
   const [selectedNodeId, setSelectedNodeId] = useState(null);
@@ -199,6 +200,25 @@ function WorkspaceDashboard() {
               onClick={handleLoadDemoTemplate}
             >
               {t('loadDemoTemplate')}
+            </button>
+
+            <button 
+              className="btn" 
+              style={{ 
+                background: 'rgba(16, 185, 129, 0.08)', 
+                color: '#10b981', 
+                border: '1px solid rgba(16, 185, 129, 0.3)', 
+                boxShadow: 'none',
+                marginTop: '12px'
+              }}
+              onClick={async () => {
+                const json = await showPrompt(t('pasteJsonPrompt'), '', true);
+                if (json) {
+                  await importGraphJSON(json);
+                }
+              }}
+            >
+              {t('importGraphBtn')}
             </button>
           </div>
         </div>

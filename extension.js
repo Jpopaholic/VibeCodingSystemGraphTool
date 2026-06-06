@@ -29,11 +29,32 @@ function activate(context) {
     let watcher;
     if (workspaceFolders && workspaceFolders.length > 0) {
       const workspaceRoot = workspaceFolders[0].uri.fsPath;
+      const graphPath = path.join(workspaceRoot, 'system-graph.json');
       
       // Initialize file system watcher for real-time file detection
       watcher = vscode.workspace.createFileSystemWatcher('**/*');
       
       const handleFileChange = (uri, eventType) => {
+        // If system-graph.json is modified on disk, notify the webview immediately
+        if (uri.fsPath === graphPath) {
+          if (fs.existsSync(graphPath)) {
+            try {
+              const raw = fs.readFileSync(graphPath, 'utf8');
+              const graphData = JSON.parse(raw);
+              panel.webview.postMessage({
+                type: 'graphFileChanged',
+                graph: graphData
+              });
+            } catch (err) {
+              panel.webview.postMessage({
+                type: 'graphFileError',
+                error: err.message
+              });
+            }
+          }
+          return;
+        }
+
         const relPath = path.relative(workspaceRoot, uri.fsPath).replace(/\\/g, '/');
         panel.webview.postMessage({
           type: 'fileSystemEvent',
@@ -44,6 +65,7 @@ function activate(context) {
 
       watcher.onDidCreate((uri) => handleFileChange(uri, 'create'));
       watcher.onDidDelete((uri) => handleFileChange(uri, 'delete'));
+      watcher.onDidChange((uri) => handleFileChange(uri, 'change'));
     }
 
     panel.onDidDispose(() => {

@@ -11,7 +11,8 @@ export default function AIBox() {
     language,
     setLanguage,
     t,
-    showPrompt
+    showPrompt,
+    importGraphJSON
   } = useWorkspace();
 
   const [newKey, setNewKey] = useState('');
@@ -210,6 +211,26 @@ Please output the raw JSON text directly (no markdown packaging, just pure JSON)
                   onClick={() => copyToClipboard(syncPrompt)}
                 >
                   {t('btnSyncPrompt')}
+                </button>
+                {/* Import / Paste Graph JSON Button */}
+                <button 
+                  className="btn" 
+                  style={{ 
+                    fontSize: '0.75rem', 
+                    padding: '8px 14px', 
+                    background: 'rgba(16, 185, 129, 0.08)', 
+                    border: '1px solid rgba(16, 185, 129, 0.3)', 
+                    color: '#10b981',
+                    boxShadow: 'none' 
+                  }}
+                  onClick={async () => {
+                    const json = await showPrompt(t('pasteJsonPrompt'), '', true);
+                    if (json) {
+                      await importGraphJSON(json);
+                    }
+                  }}
+                >
+                  {t('importGraphBtn')}
                 </button>
                 {/* Secondary Warning Bootstrap Button */}
                 <button 
