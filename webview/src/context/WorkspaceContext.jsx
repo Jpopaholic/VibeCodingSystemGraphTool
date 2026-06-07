@@ -260,7 +260,7 @@ export function WorkspaceProvider({ children }) {
               if (nodePath) {
                 const cleanNodePath = nodePath.replace(/\\/g, '/').toLowerCase();
                 if (cleanNodePath === cleanEventPath || cleanEventPath.endsWith(cleanNodePath)) {
-                  const newStatus = fsEvent === 'create' ? 'completed' : 'todo';
+                  const newStatus = (fsEvent === 'create' || fsEvent === 'change') ? 'completed' : 'todo';
                   if (node.synthesis?.status !== newStatus) {
                     changed = true;
                     return {
