@@ -8,7 +8,6 @@
     "type": "git",
     "url": "https://github.com/Jpopaholic/VibeCodingSystemGraphTool.git"
   },
-
   "engines": {
     "vscode": "^1.60.0"
   },
@@ -42,8 +41,12 @@
     ],
     "menus": {
       "commandPalette": [
-        { "command": "vibegraph.open" },
-        { "command": "vibegraph.bootstrap" }
+        {
+          "command": "vibegraph.open"
+        },
+        {
+          "command": "vibegraph.bootstrap"
+        }
       ],
       "editor/title": [
         {
