@@ -1,7 +1,7 @@
 # VibeGraph 🚀
 > Vibe Coding 系統規劃與約束契約地圖 (Visual Constraint Map & Prompt Compiler for Vibe Coding)
 
-VibeGraph 是一個為 AI 輔助開發量身打造的視覺化架構層。它採用「智能微推引導」與「三層架構解耦」，在背後默默協助開發者理清程式碼結構、對齊名詞定義，但**不強制鎖定您的開發流程、不施加工程化條款**，維持 Vibe Coding 的自由與直覺。
+VibeGraph 是一個為 AI 輔助開發量身打造的視覺化架構層。它採用「智能微推引導」與「三層架構解耦」，在背後默默協助開發者釐清程式碼結構、對齊名詞定義，但**不強制鎖定您的開發流程、不施加工程化條款**，維持 Vibe Coding 的自由與直覺。
 
 ---
 
