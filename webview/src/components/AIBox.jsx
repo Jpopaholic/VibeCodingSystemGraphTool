@@ -82,18 +82,20 @@ ${goal}`
      {
        "id": "唯一的英文識別碼（例如 auth-helper）",
        "name": "中文組件名稱",
-       "produce": "以主動動詞說明它產出什麼成果（例如 stores sessions locally）",
+       "produce": "以主動動詞說明它產出什麼成果（使用繁體中文，例如「在本地儲存會話」）",
        "vibeNotes": "該組件的補充說明備忘",
        "dependencies": [ "依賴的其他 node id 陣列" ],
        "synthesis": {
          "filePath": "建議的實體檔案存放路徑（例如 src/utils/auth.js）",
          "status": "todo",
-         "intentSignal": "精煉後的乾淨核心實作目的",
+         "intentSignal": "精煉後的乾淨核心實作目的（使用繁體中文）",
          "extractedConstraints": [ "從說明中提煉出的具體技術規範（如不能用第三方庫）" ]
        },
        "trace": { "stale": false, "lastImplementedPrompt": "" }
      }
    ]
+
+*重要指示*：請務必使用繁體中文填寫所有 nodes 中的 name、produce、vibeNotes、synthesis.intentSignal 等屬性，以及 glossary 的說明內容。
 
 我的系統功能願景是：
 ${goal}`;
@@ -135,6 +137,8 @@ Please output the raw JSON text directly (no markdown packaging, just pure JSON)
    - **重要**：如果該節點的 \`synthesis.userOverridden\` 為 true，則**絕對不要**修改該節點的 \`synthesis\` 內容！
 3. 分析目前的程式碼調用關係，自動更新節點間的 \`dependencies\`。
 4. 提取出程式碼中的關鍵名詞，補全並更新 \`glossary\` 定義。
+
+*重要指示*：在同步、整理或新增節點與名詞時，請務必使用繁體中文填寫所有的 name、produce、vibeNotes、synthesis.intentSignal 等屬性，以及 glossary 的說明內容。
 
 請直接輸出完整的 JSON 字串內容（不要 markdown 包裝，直接純 JSON）。`;
 
@@ -181,6 +185,8 @@ ${currentGraphJSON}
 3. 建立或更新節點之間的依賴關係（\`dependencies\`）。
 4. 在 \`glossary\` 中加入新增功能涉及的核心名詞與資料結構。
 5. 保持現有與此功能無關的節點不變。
+
+*重要指示*：在新增節點或名詞時，請務必使用繁體中文填寫所有的 name、produce、vibeNotes、synthesis.intentSignal 等屬性，以及 glossary 的說明內容。
 
 請直接輸出完整且有效的 \`system-graph.json\` 純 JSON 內容（不要使用 markdown 區塊包裹，直接輸出 JSON 內容）。`;
 
@@ -236,6 +242,8 @@ ${currentGraphJSON}
 2. 進行目標節點的修改。更新其 \`produce\`（產出描述）、\`vibeNotes\` 或 \`synthesis\`（意圖與技術約束）等欄位。
 3. 如果需要，調整節點之間的相依依賴線（\`dependencies\`）。
 4. 保持其餘與此修改無關的節點、全局約束與業務名詞定義不變。
+
+*重要指示*：在修改任何欄位、節點或名詞時，請務必使用繁體中文填寫所有的 name、produce、vibeNotes、synthesis.intentSignal 等屬性，以及 glossary 的說明內容。
 
 請直接輸出完整且有效的 \`system-graph.json\` 純 JSON 內容（不要使用 markdown 區塊包裹，直接輸出 JSON 內容）。`;
 
@@ -340,6 +348,8 @@ ${currentGraphJSON}
 3. 根據重構後的設計，清理並重建所有節點間的依賴相依樹（\`dependencies樹\`）。
 4. 更新名詞定義表（\`glossary\`）與全局約束（\`globalConstraints\`）以符合新的架構設計。
 5. 確保所有既有功能的產出預期（produce）在新架構中依然被完整覆蓋。
+
+*重要指示*：在重構、調整或新增組件時，請務必使用繁體中文填寫所有的 name、produce、vibeNotes、synthesis.intentSignal 等屬性，以及 glossary 的說明內容。
 
 請直接輸出完整且有效的 \`system-graph.json\` 純 JSON 內容（不要使用 markdown 區塊包裹，直接輸出 JSON 內容）。`;
 

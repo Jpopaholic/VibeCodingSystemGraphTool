@@ -71,7 +71,7 @@ export const locales = {
     noNodeSelected: "請點擊地圖中的節點\n進行詳細設定與編譯",
     labelNodeName: "🟢 節點名稱",
     labelNodeProduce: "🟢 產出預期 (What does this produce?)",
-    produceHint: "💡 句型範本：'stores something...', 'lets user do...', 'helps user...'",
+    produceHint: "💡 句型範本：'在本地儲存...', '讓使用者可以...', '協助使用者...'",
     labelVibeNotes: "🟢 開發隨筆 / 備忘錄 (Vibe Notes)",
     vibeNotesPlaceholder: "在這裡隨便寫寫您對這個組件的開發備忘、技術碎碎念、或是需要遵循的口語要求...",
     labelDeps: "🟢 依賴的前置組件",
