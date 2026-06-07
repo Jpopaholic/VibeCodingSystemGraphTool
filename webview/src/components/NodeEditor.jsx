@@ -75,7 +75,7 @@ export default function NodeEditor({ activeNode, onDeleteNode }) {
   // Handle saving Layer 1 & 2 values
   const handleSaveField = (key, value) => {
     const updatedNode = { ...activeNode };
-    if (key === 'name' || key === 'produce' || key === 'vibeNotes') {
+    if (key === 'name' || key === 'produce' || key === 'vibeNotes' || key === 'vibeImage') {
       updatedNode[key] = value;
     } else if (key === 'filePath' || key === 'status') {
       updatedNode.synthesis = {
@@ -84,6 +84,42 @@ export default function NodeEditor({ activeNode, onDeleteNode }) {
       };
     }
     updateNode(updatedNode);
+  };
+
+  const handleImageUpload = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const rawBase64 = e.target.result;
+      
+      const img = new Image();
+      img.src = rawBase64;
+      img.onload = () => {
+        const maxWidth = 800;
+        const maxHeight = 800;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth || height > maxHeight) {
+          if (width > height) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+        handleSaveField('vibeImage', compressedBase64);
+      };
+    };
+    reader.readAsDataURL(file);
   };
 
   // Handle saving manual Synthesis overrides
@@ -195,6 +231,83 @@ export default function NodeEditor({ activeNode, onDeleteNode }) {
             onChange={(e) => setVibeNotes(e.target.value)}
             onBlur={() => handleSaveField('vibeNotes', vibeNotes)}
           />
+        </div>
+
+        {/* Layer 1: vibeImage */}
+        <div className="form-group">
+          <label className="form-label">{t('labelVibeImage')}</label>
+          {activeNode.vibeImage ? (
+            <div className="image-preview-container" style={{ position: 'relative', border: '1px solid var(--panel-border)', borderRadius: '8px', overflow: 'hidden', background: '#09090d', padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <img 
+                src={activeNode.vibeImage} 
+                alt="Vibe Mockup" 
+                style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '180px', objectFit: 'contain', borderRadius: '6px' }} 
+              />
+              <button 
+                className="btn" 
+                style={{ 
+                  marginTop: '10px',
+                  width: '100%',
+                  padding: '6px 12px', 
+                  fontSize: '0.75rem', 
+                  background: 'rgba(239, 68, 68, 0.15)', 
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#ef4444',
+                  boxShadow: 'none' 
+                }}
+                onClick={() => handleSaveField('vibeImage', '')}
+              >
+                {t('btnDeleteImage')}
+              </button>
+            </div>
+          ) : (
+            <div 
+              className="image-dropzone"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                  handleImageUpload(file);
+                }
+              }}
+              onPaste={(e) => {
+                const file = Array.from(e.clipboardData.files).find(f => f.type.startsWith('image/'));
+                if (file) {
+                  handleImageUpload(file);
+                }
+              }}
+              tabIndex={0}
+              style={{
+                border: '1px dashed var(--panel-border)',
+                borderRadius: '8px',
+                padding: '20px 10px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                background: 'rgba(0, 0, 0, 0.15)',
+                outline: 'none',
+                transition: 'var(--transition-smooth)'
+              }}
+              onClick={() => document.getElementById('vibe-image-input').click()}
+            >
+              <input 
+                id="vibe-image-input" 
+                type="file" 
+                accept="image/*" 
+                style={{ display: 'none' }} 
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    handleImageUpload(file);
+                  }
+                }}
+              />
+              <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>🖼️</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                {t('vibeImagePlaceholder')}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Layer 1: Dependencies List */}

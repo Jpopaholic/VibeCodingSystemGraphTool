@@ -224,6 +224,10 @@ export default function PromptCompiler({ activeNode }) {
         templatePreservationZh += '\n* 備註：開發隨筆中提到了需要參考/使用外部檔案，但目前未提供。請協助為我規劃並生成該外部檔案（或範本骨架）的程式碼結構與模組設計。';
       }
 
+      const imgNotice = activeNode.vibeImage
+        ? t('imgPromptNotice')
+        : '';
+
       // Generate final prompt text
       const promptText = language === 'en'
         ? `You are now a software implementation expert. Please implement this component for me based on the specified "Output Expectation" and "Synthesis Code Contract".
@@ -237,12 +241,13 @@ export default function PromptCompiler({ activeNode }) {
   > "${activeNode.produce}"
 ${activeTemplatePrompt}
 ${importedTemplatesPrompt}
+${imgNotice}
 ---
 
 ## 🧠 Memos & Vibe Notes
-${rawNotes ? `### Developer Memos:\\n${rawNotes}\\n` : ''}
-${intentSignal ? `### AI Distilled Intent (Intent Signal):\\n${intentSignal}\\n` : ''}
-${constraints ? `### Key Technical Constraints:\\n${constraints}\\n` : ''}
+${rawNotes ? `### Developer Memos:\n${rawNotes}\n` : ''}
+${intentSignal ? `### AI Distilled Intent (Intent Signal):\n${intentSignal}\n` : ''}
+${constraints ? `### Key Technical Constraints:\n${constraints}\n` : ''}
 
 ---
 
@@ -280,6 +285,7 @@ ${dependenciesContext || 'No dependencies.'}
   > "${activeNode.produce}"
 ${activeTemplatePrompt}
 ${importedTemplatesPrompt}
+${imgNotice}
 ---
 
 ## 🧠 設計隨筆與開發備忘 (Vibe Notes)
@@ -321,15 +327,14 @@ ${dependenciesContext || '無前置依賴組件。'}
     }
   };
 
-  const handleCopyPrompt = () => {
-    navigator.clipboard.writeText(compiledPrompt);
+  const showNotification = (msg, bg = '#9333ea') => {
     const notification = document.createElement('div');
-    notification.innerText = t('copiedPromptAlert');
+    notification.innerText = msg;
     notification.style.position = 'fixed';
     notification.style.bottom = '20px';
     notification.style.left = '50%';
     notification.style.transform = 'translateX(-50%)';
-    notification.style.background = '#9333ea';
+    notification.style.background = bg;
     notification.style.color = '#fff';
     notification.style.padding = '8px 16px';
     notification.style.borderRadius = '4px';
@@ -340,6 +345,52 @@ ${dependenciesContext || '無前置依賴組件。'}
     setTimeout(() => {
       document.body.removeChild(notification);
     }, 2000);
+  };
+
+  const convertBase64ToPngBlob = (base64Str) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Canvas toBlob failed'));
+          }
+        }, 'image/png');
+      };
+      img.onerror = () => reject(new Error('Load image failed'));
+      img.src = base64Str;
+    });
+  };
+
+  const handleCopyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(compiledPrompt);
+      showNotification(t('copiedPromptAlert'), '#9333ea');
+    } catch (err) {
+      await showAlert(t('compileFailedAlert') + err.message);
+    }
+  };
+
+  const handleCopyImage = async () => {
+    if (!activeNode.vibeImage) return;
+    try {
+      const pngBlob = await convertBase64ToPngBlob(activeNode.vibeImage);
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'image/png': pngBlob
+        })
+      ]);
+      showNotification(t('copiedImageAlert'), '#10b981');
+    } catch (err) {
+      await showAlert(t('copyImageFailedAlert') + err.message);
+    }
   };
 
   // Promise-based async file write apply
@@ -398,6 +449,11 @@ ${dependenciesContext || '無前置依賴組件。'}
 
       {compiledPrompt ? (
         <div className="prompt-box">
+          {activeNode.vibeImage && (
+            <div className="compiled-image-preview" style={{ marginBottom: '14px', border: '1px solid var(--panel-border)', borderRadius: '8px', overflow: 'hidden', background: '#000', display: 'flex', justifyContent: 'center' }}>
+              <img src={activeNode.vibeImage} alt="Vibe Mockup" style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '150px', objectFit: 'contain' }} />
+            </div>
+          )}
           <textarea 
             className="form-input" 
             style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', minHeight: '120px', background: '#050508' }}
@@ -408,6 +464,11 @@ ${dependenciesContext || '無前置依賴組件。'}
             <button className="btn" onClick={handleCopyPrompt}>
               {t('btnCopyPrompt')}
             </button>
+            {activeNode.vibeImage && (
+              <button className="btn" style={{ background: '#10b981', flex: 'none' }} onClick={handleCopyImage}>
+                {t('btnCopyImage')}
+              </button>
+            )}
             <button 
               className="btn" 
               style={{ background: '#374151', flex: 'none', width: '80px' }}

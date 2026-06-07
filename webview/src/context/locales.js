@@ -90,6 +90,9 @@ export const locales = {
     extractedConstraintsLabel: "提取技術約束 (分行)",
     saveOverrideBtn: "儲存覆寫 👑",
     cancelBtn: "取消",
+    labelVibeImage: "🟢 參考圖片 / Mockup (Vibe Image)",
+    vibeImagePlaceholder: "拖曳圖片至此，或點擊選擇檔案、或在此區域貼上(Ctrl+V)圖片",
+    btnDeleteImage: "刪除圖片 🗑️",
 
     // Prompt Compiler
     compilerTitle: "⚡ Prompt 核心編譯器",
@@ -112,6 +115,10 @@ export const locales = {
     promptDepSkeleton: "### ⏳ 待辦的前置組件 (已有結構範本): {name} ({path})\n此組件雖然尚未開發完成，但已有名詞或基本骨架。請遵循此檔案的結構與接口進行整合呼叫：\n```javascript\n// Path: {path}\n```",
     promptImportedTemplate: "\n## 📝 偵測到的外部參考範本/檔案 (Referenced File: {path})\n系統自動偵測到開發隨筆中提及此外部檔案，**請參考其設計或在其基礎上實作**：\n```javascript\n// Path: {path}\n```\n",
     askExternalFilePathPrompt: "偵測到您在開發隨筆中提到「外部檔案」，請輸入要匯入的外部檔案路徑（💡 提示：留空則由 AI 自動規劃並生成該外部檔案）：",
+    btnCopyImage: "複製圖片 🖼️",
+    copiedImageAlert: "✓ 圖片已複製到剪貼簿！",
+    copyImageFailedAlert: "複製圖片失敗：",
+    imgPromptNotice: "\n## 🎨 畫面參考 (Image Reference)\n此組件附帶 UI 畫面或圖片參考。請在接收到貼上的圖片時，詳細參考圖片中的排版、視覺風格與元件結構來撰寫程式碼。\n",
 
 
 
@@ -211,6 +218,9 @@ export const locales = {
     extractedConstraintsLabel: "Extracted Technical Constraints (Line separated)",
     saveOverrideBtn: "Save Override 👑",
     cancelBtn: "Cancel",
+    labelVibeImage: "🟢 Reference Image / Mockup",
+    vibeImagePlaceholder: "Drag & drop image here, click to upload, or paste (Ctrl+V) in this zone",
+    btnDeleteImage: "Remove Image 🗑️",
 
     // Prompt Compiler
     compilerTitle: "⚡ Prompt Compiler",
@@ -234,6 +244,10 @@ export const locales = {
     promptDepSkeleton: "### ⏳ Pending Dependency (Skeleton exists): {name} ({path})\nAlthough this component is not fully completed, a basic skeleton or structure exists. Please follow this file's structure and interfaces to integrate/invoke it:\n```javascript\n// Path: {path}\n```",
     promptImportedTemplate: "\n## 📝 Detected Reference Template/File (Referenced File: {path})\nThe system detected this file mentioned in Vibe Notes. **Please refer to its design or implement code based on it**:\n```javascript\n// Path: {path}\n```\n",
     askExternalFilePathPrompt: "Detected 'external file' reference in your notes. Please enter the file path to import (💡 Tip: Leave blank to let AI automatically design and generate the template for this external file):",
+    btnCopyImage: "Copy Image 🖼️",
+    copiedImageAlert: "✓ Image copied to clipboard!",
+    copyImageFailedAlert: "Failed to copy image: ",
+    imgPromptNotice: "\n## 🎨 Visual Reference (Image Reference)\nAn image reference/mockup is attached to this component. Please inspect the pasted image and strictly match its visual style, layout, and component structure.\n",
 
 
 
