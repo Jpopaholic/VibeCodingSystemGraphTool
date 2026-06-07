@@ -7,8 +7,12 @@ export default function AIBox() {
     const handler = async (e) => {
       if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) {
         e.preventDefault();
-        const goal = await showPrompt(t('askGoalPrompt'), language === 'en' ? 'e.g. A Markdown editor with local save and PDF export' : '例如：做一個結合 IndexedDB 存檔的 Markdown 編輯器，且能匯出 PDF');
-        if (goal) copyToClipboard(getBootstrapPrompt(goal));
+        const result = await showPrompt(t('askGoalPrompt'), language === 'en' ? 'e.g. A Markdown editor with local save and PDF export' : '例如：做一個結合 IndexedDB 存檔的 Markdown 編輯器，且能匯出 PDF', false, true);
+        if (result) {
+          const goal = typeof result === 'string' ? result : result.text;
+          const images = typeof result === 'string' ? [] : result.images;
+          copyToClipboard(getBootstrapPrompt(goal, images));
+        }
       }
     };
     window.addEventListener('keydown', handler);
@@ -16,6 +20,7 @@ export default function AIBox() {
   }, []);
 
   const { 
+    isVsCode,
     nodes,
     glossary, 
     updateGlossary, 
@@ -25,7 +30,8 @@ export default function AIBox() {
     setLanguage,
     t,
     showPrompt,
-    importGraphJSON
+    importGraphJSON,
+    exportGraphJSON
   } = useWorkspace();
 
   const [newKey, setNewKey] = useState('');
@@ -33,10 +39,12 @@ export default function AIBox() {
   const [editingKey, setEditingKey] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [newConstraint, setNewConstraint] = useState('');
+  const [constraintImages, setConstraintImages] = useState([]);
 
   // 1. Language-aware Bootstrap Prompt templates
-  const getBootstrapPrompt = (goal) => language === 'en'
-    ? `Please act as a software architecture expert, analyzing my system vision described below. 
+  const getBootstrapPrompt = (goal, images = []) => {
+    let prompt = language === 'en'
+      ? `Please act as a software architecture expert, analyzing my system vision described below. 
 I want to create a \`system-graph.json\` file in my project root directory. This file is our contract for co-development.
 Please plan three sections and output in raw JSON format (no markdown code blocks, just raw JSON text):
 
@@ -64,9 +72,9 @@ The JSON must strictly follow this schema. Any missing fields will cause import 
 
 My system vision is:
 ${goal}`
-    : `請作為軟體架構規劃專家，分析我接下來要建造的系統想法。
+      : `請作為軟體架構規劃專家，分析我接下來要建造的系統想法。
 我希望在專案根目錄下建立一個 \`system-graph.json\` 檔案。這個檔案是我們協同開發的唯一契約。
-請為我規劃以下三個部分，並輸出為純 JSON 格式（不要包含任何 markdown 標記或 \`\`\`json 區塊，直接輸出 JSON 內容）：
+請為我規劃以下三個部分，並輸出為純 JSON 格式（不要包含 any markdown 標記或 \`\`\`json 區塊，直接輸出 JSON 內容）：
 
 1. "glossary": { "名詞": "定義與資料結構模型說明" }，提取系統的核心業務實體名詞。
 2. "globalConstraints": [ "全域系統約束條件（如技術棧、排版風格）" ]。
@@ -88,7 +96,18 @@ ${goal}`
    ]
 
 我的系統功能願景是：
-`;
+${goal}`;
+
+    if (images && images.length > 0) {
+      prompt += language === 'en'
+        ? `\n\n## 🎨 Visual References for System Graph\nThis vision contains the following reference mockups. Please inspect them and create initial nodes with these images stored in vibeImage/vibeImages:\n`
+        : `\n\n## 🎨 系統視覺畫面參考\n此願景包含以下參考畫面。請詳細參考這些圖片，並將其規劃至初始節點的 vibeImage/vibeImages 屬性中：\n`;
+      images.forEach((img, idx) => {
+        prompt += `\nImage ${idx + 1}:\n${img}\n`;
+      });
+    }
+    return prompt;
+  };
 
   // 2. Language-aware Sync Prompt templates
   const syncPrompt = language === 'en'
@@ -120,14 +139,14 @@ Please output the raw JSON text directly (no markdown packaging, just pure JSON)
 請直接輸出完整的 JSON 字串內容（不要 markdown 包裝，直接純 JSON）。`;
 
   // 3. Language-aware Add Feature Prompt template generator
-  const getAddFeaturePrompt = (feature) => {
+  const getAddFeaturePrompt = (feature, images = []) => {
     const currentGraphJSON = JSON.stringify({
       glossary: glossary || {},
       globalConstraints: globalConstraints || [],
       nodes: nodes || []
     }, null, 2);
 
-    return language === 'en'
+    let prompt = language === 'en'
       ? `Please act as a software architecture expert. We want to "add a new feature" to our existing system. Please help design and plan the changes, and output the updated and complete \`system-graph.json\` JSON content.
 
 Our current system graph contract (\`system-graph.json\`) is:
@@ -164,17 +183,27 @@ ${currentGraphJSON}
 5. 保持現有與此功能無關的節點不變。
 
 請直接輸出完整且有效的 \`system-graph.json\` 純 JSON 內容（不要使用 markdown 區塊包裹，直接輸出 JSON 內容）。`;
+
+    if (images && images.length > 0) {
+      prompt += language === 'en'
+        ? `\n\n## 🎨 Visual References for the New Feature\nThis feature contains the following reference mockups. Please inspect these images and incorporate them into the design. For any new nodes, you can store these images under their vibeImage/vibeImages property:\n`
+        : `\n\n## 🎨 新增功能畫面參考\n此功能包含以下參考畫面。請詳細參考這些圖片的排版、設計風格，並將其規劃至新增節點的 vibeImage/vibeImages 屬性中：\n`;
+      images.forEach((img, idx) => {
+        prompt += `\nImage ${idx + 1}:\n${img}\n`;
+      });
+    }
+    return prompt;
   };
 
   // 4. Language-aware Modify Feature Prompt template generator
-  const getModifyFeaturePrompt = (detail) => {
+  const getModifyFeaturePrompt = (detail, images = []) => {
     const currentGraphJSON = JSON.stringify({
       glossary: glossary || {},
       globalConstraints: globalConstraints || [],
       nodes: nodes || []
     }, null, 2);
 
-    return language === 'en'
+    let prompt = language === 'en'
       ? `Please act as a software architecture expert. We want to "modify a feature or node" in our existing system. Please help design and plan the changes, and output the updated and complete \`system-graph.json\` JSON content.
 
 Our current system graph contract (\`system-graph.json\`) is:
@@ -209,6 +238,16 @@ ${currentGraphJSON}
 4. 保持其餘與此修改無關的節點、全局約束與業務名詞定義不變。
 
 請直接輸出完整且有效的 \`system-graph.json\` 純 JSON 內容（不要使用 markdown 區塊包裹，直接輸出 JSON 內容）。`;
+
+    if (images && images.length > 0) {
+      prompt += language === 'en'
+        ? `\n\n## 🎨 Visual References for Modifications\nThis modification request contains the following reference mockups. Please inspect them and update the system design accordingly:\n`
+        : `\n\n## 🎨 修改功能畫面參考\n此修改包含以下參考畫面。請詳細參考這些圖片以更新系統設計：\n`;
+      images.forEach((img, idx) => {
+        prompt += `\nImage ${idx + 1}:\n${img}\n`;
+      });
+    }
+    return prompt;
   };
 
   // 5. Language-aware Remove Feature Prompt template generator
@@ -259,14 +298,14 @@ ${currentGraphJSON}
   };
 
   // 6. Language-aware Refactor Architecture Prompt template generator
-  const getRefactorArchitecturePrompt = (goal) => {
+  const getRefactorArchitecturePrompt = (goal, images = []) => {
     const currentGraphJSON = JSON.stringify({
       glossary: glossary || {},
       globalConstraints: globalConstraints || [],
       nodes: nodes || []
     }, null, 2);
 
-    return language === 'en'
+    let prompt = language === 'en'
       ? `Please act as a software architecture expert. We want to "refactor the system architecture" to optimize its structure. Please help plan the refactoring, and output the updated and complete \`system-graph.json\` JSON content.
 
 Our current system graph contract (\`system-graph.json\`) is:
@@ -303,6 +342,16 @@ ${currentGraphJSON}
 5. 確保所有既有功能的產出預期（produce）在新架構中依然被完整覆蓋。
 
 請直接輸出完整且有效的 \`system-graph.json\` 純 JSON 內容（不要使用 markdown 區塊包裹，直接輸出 JSON 內容）。`;
+
+    if (images && images.length > 0) {
+      prompt += language === 'en'
+        ? `\n\n## 🎨 Visual References for Refactoring\nThis refactoring request contains the following reference mockups. Please inspect them and optimize the architecture accordingly:\n`
+        : `\n\n## 🎨 重構畫面參考\n此重構包含以下參考畫面。請詳細參考這些圖片以優化系統架構設計：\n`;
+      images.forEach((img, idx) => {
+        prompt += `\nImage ${idx + 1}:\n${img}\n`;
+      });
+    }
+    return prompt;
   };
 
   const copyToClipboard = (text) => {
@@ -354,11 +403,68 @@ ${currentGraphJSON}
     setEditingKey(null);
   };
 
+  const handleConstraintImagesUpload = (files) => {
+    const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (validFiles.length === 0) return;
+
+    if (constraintImages.length + validFiles.length > 5) {
+      alert(t('maxImagesLimitAlert'));
+      return;
+    }
+
+    let processedCount = 0;
+    const newImages = [];
+
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const rawBase64 = e.target.result;
+        const img = new Image();
+        img.src = rawBase64;
+        img.onload = () => {
+          const maxWidth = 800;
+          const maxHeight = 800;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > maxWidth || height > maxHeight) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+          newImages.push(compressedBase64);
+          processedCount++;
+
+          if (processedCount === validFiles.length) {
+            setConstraintImages(prev => [...prev, ...newImages].slice(0, 5));
+          }
+        };
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleAddConstraint = (e) => {
     e.preventDefault();
     if (!newConstraint.trim()) return;
-    updateGlobalConstraints([...globalConstraints, newConstraint.trim()]);
+    const value = constraintImages.length > 0 
+      ? { text: newConstraint.trim(), vibeImages: constraintImages }
+      : newConstraint.trim();
+    updateGlobalConstraints([...globalConstraints, value]);
     setNewConstraint('');
+    setConstraintImages([]);
   };
 
   const handleRemoveConstraint = (index) => {
@@ -372,6 +478,20 @@ ${currentGraphJSON}
       <div className="panel-header">
         <div className="panel-title">
           <span>{t('panelTitle')}</span>
+          <span style={{
+            fontSize: '0.65rem',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            fontWeight: '600',
+            marginLeft: '8px',
+            background: isVsCode ? 'rgba(16, 185, 129, 0.15)' : 'rgba(147, 51, 234, 0.15)',
+            color: isVsCode ? '#34d399' : '#d8b4fe',
+            border: isVsCode ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(147, 51, 234, 0.3)',
+            display: 'inline-block',
+            verticalAlign: 'middle'
+          }}>
+            {isVsCode ? 'VS Code' : 'Web App'}
+          </span>
         </div>
         <select 
           value={language}
@@ -423,12 +543,16 @@ ${currentGraphJSON}
                     background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' 
                   }}
                   onClick={async () => {
-                    const feature = await showPrompt(
+                    const result = await showPrompt(
                       language === 'en' ? 'Describe the new feature to add:' : '請描述要新增的新功能：',
-                      language === 'en' ? 'e.g. Add user comments to each note' : '例如：在每篇筆記下方加入使用者評論'
+                      language === 'en' ? 'e.g. Add user comments to each note' : '例如：在每篇筆記下方加入使用者評論',
+                      false,
+                      true
                     );
-                    if (feature) {
-                      copyToClipboard(getAddFeaturePrompt(feature));
+                    if (result) {
+                      const feature = typeof result === 'string' ? result : result.text;
+                      const images = typeof result === 'string' ? [] : result.images;
+                      copyToClipboard(getAddFeaturePrompt(feature, images));
                     }
                   }}
                 >
@@ -443,12 +567,16 @@ ${currentGraphJSON}
                     background: 'linear-gradient(135deg, #d97706, #b45309)' 
                   }}
                   onClick={async () => {
-                    const detail = await showPrompt(
+                    const result = await showPrompt(
                       language === 'en' ? 'Describe the feature/detail to modify:' : '請描述要修改的功能或細節：',
-                      language === 'en' ? 'e.g. Change db-helper to support JSON backup' : '例如：將 db-helper 修改為支援匯出備份 JSON 檔案'
+                      language === 'en' ? 'e.g. Change db-helper to support JSON backup' : '例如：將 db-helper 修改為支援匯出備份 JSON 檔案',
+                      false,
+                      true
                     );
-                    if (detail) {
-                      copyToClipboard(getModifyFeaturePrompt(detail));
+                    if (result) {
+                      const detail = typeof result === 'string' ? result : result.text;
+                      const images = typeof result === 'string' ? [] : result.images;
+                      copyToClipboard(getModifyFeaturePrompt(detail, images));
                     }
                   }}
                 >
@@ -483,37 +611,60 @@ ${currentGraphJSON}
                     background: 'linear-gradient(135deg, #2563eb, #1d4ed8)' 
                   }}
                   onClick={async () => {
-                    const goal = await showPrompt(
+                    const result = await showPrompt(
                       language === 'en' ? 'Describe your architecture refactoring goals:' : '請描述您的架構重構目標：',
-                      language === 'en' ? 'e.g. Decouple modules, merge redundant nodes, optimize data flow' : '例如：解耦現有模組、合併冗餘節點、優化資料流相依關係'
+                      language === 'en' ? 'e.g. Decouple modules, merge redundant nodes, optimize data flow' : '例如：解耦現有模組、合併冗餘節點、優化資料流相依關係',
+                      false,
+                      true
                     );
-                    if (goal) {
-                      copyToClipboard(getRefactorArchitecturePrompt(goal));
+                    if (result) {
+                      const goal = typeof result === 'string' ? result : result.text;
+                      const images = typeof result === 'string' ? [] : result.images;
+                      copyToClipboard(getRefactorArchitecturePrompt(goal, images));
                     }
                   }}
                 >
                   {t('btnRefactorArchitecturePrompt')}
                 </button>
-                {/* Import / Paste Graph JSON Button */}
-                <button 
-                  className="btn" 
-                  style={{ 
-                    fontSize: '0.75rem', 
-                    padding: '8px 14px', 
-                    background: 'rgba(16, 185, 129, 0.08)', 
-                    border: '1px solid rgba(16, 185, 129, 0.3)', 
-                    color: '#10b981',
-                    boxShadow: 'none' 
-                  }}
-                  onClick={async () => {
-                    const json = await showPrompt(t('pasteJsonPrompt'), '', true);
-                    if (json) {
-                      await importGraphJSON(json);
-                    }
-                  }}
-                >
-                  {t('importGraphBtn')}
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {/* Import / Paste Graph JSON Button */}
+                  <button 
+                    className="btn" 
+                    style={{ 
+                      flex: 1,
+                      fontSize: '0.75rem', 
+                      padding: '8px 10px', 
+                      background: 'rgba(16, 185, 129, 0.08)', 
+                      border: '1px solid rgba(16, 185, 129, 0.3)', 
+                      color: '#10b981',
+                      boxShadow: 'none' 
+                    }}
+                    onClick={async () => {
+                      const json = await showPrompt(t('pasteJsonPrompt'), '', true);
+                      if (json) {
+                        await importGraphJSON(json);
+                      }
+                    }}
+                  >
+                    {t('importGraphBtn')}
+                  </button>
+                  {/* Export / Download Graph JSON Button */}
+                  <button 
+                    className="btn" 
+                    style={{ 
+                      flex: 1,
+                      fontSize: '0.75rem', 
+                      padding: '8px 10px', 
+                      background: 'rgba(147, 51, 234, 0.08)', 
+                      border: '1px solid rgba(147, 51, 234, 0.3)', 
+                      color: '#c084fc',
+                      boxShadow: 'none' 
+                    }}
+                    onClick={exportGraphJSON}
+                  >
+                    {t('exportGraphBtn')}
+                  </button>
+                </div>
                 {/* Secondary Warning Bootstrap Button */}
                 <button 
                   className="btn" 
@@ -526,8 +677,12 @@ ${currentGraphJSON}
                     boxShadow: 'none' 
                   }}
                   onClick={async () => {
-                    const goal = await showPrompt(t('askGoalPrompt'), language === 'en' ? 'e.g. A Markdown editor with local save and PDF export' : '例如：做一個結合 IndexedDB 存檔 dung Markdown 編輯器，且能匯出 PDF');
-                    if (goal) copyToClipboard(getBootstrapPrompt(goal));
+                    const result = await showPrompt(t('askGoalPrompt'), language === 'en' ? 'e.g. A Markdown editor with local save and PDF export' : '例如：做一個結合 IndexedDB 存檔 dung Markdown 編輯器，且能匯出 PDF', false, true);
+                    if (result) {
+                      const goal = typeof result === 'string' ? result : result.text;
+                      const images = typeof result === 'string' ? [] : result.images;
+                      copyToClipboard(getBootstrapPrompt(goal, images));
+                    }
                   }}
                 >
                   {language === 'en' ? '⚠️ Re-bootstrap Project...' : '⚠️ 重新全新建圖...'}
@@ -540,8 +695,12 @@ ${currentGraphJSON}
                   className="btn" 
                   style={{ fontSize: '0.78rem', padding: '10px 14px', background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
                   onClick={async () => {
-                    const goal = await showPrompt(t('askGoalPrompt'), language === 'en' ? 'e.g. A Markdown editor with local save and PDF export' : '例如：做一個結合 IndexedDB 存檔的 Markdown 編輯器，且能匯出 PDF');
-                    if (goal) copyToClipboard(getBootstrapPrompt(goal));
+                    const result = await showPrompt(t('askGoalPrompt'), language === 'en' ? 'e.g. A Markdown editor with local save and PDF export' : '例如：做一個結合 IndexedDB 存檔的 Markdown 編輯器，且能匯出 PDF', false, true);
+                    if (result) {
+                      const goal = typeof result === 'string' ? result : result.text;
+                      const images = typeof result === 'string' ? [] : result.images;
+                      copyToClipboard(getBootstrapPrompt(goal, images));
+                    }
                   }}
                 >
                   {t('btnInitPrompt')} (Ctrl+Shift+I)
@@ -570,32 +729,91 @@ ${currentGraphJSON}
         <div className="glossary-section" style={{ borderBottom: '1px solid var(--panel-border)', paddingBottom: '20px', marginTop: '20px' }}>
           <div className="form-label">{t('globalConstraintsTitle')}</div>
           <div className="glossary-list" style={{ marginBottom: '12px' }}>
-            {globalConstraints.map((constraint, idx) => (
-              <div 
-                key={idx} 
-                className="glossary-item"
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px' }}
-              >
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-main)' }}>• {constraint}</span>
-                <button 
-                  onClick={() => handleRemoveConstraint(idx)}
-                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem' }}
-                  title="Delete"
+            {globalConstraints.map((constraint, idx) => {
+              const isObj = typeof constraint === 'object' && constraint !== null;
+              const text = isObj ? constraint.text : constraint;
+              const imgs = isObj ? constraint.vibeImages || [] : [];
+              return (
+                <div 
+                  key={idx} 
+                  className="glossary-item"
+                  style={{ display: 'flex', flexDirection: 'column', padding: '8px 12px', gap: '4px' }}
                 >
-                  ✕
-                </button>
-              </div>
-            ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-main)' }}>• {text}</span>
+                    <button 
+                      onClick={() => handleRemoveConstraint(idx)}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.9rem' }}
+                      title="Delete"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {imgs.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                      {imgs.map((img, imgIdx) => (
+                        <div key={imgIdx} style={{ position: 'relative', border: '1px solid var(--panel-border)', borderRadius: '4px', width: '35px', height: '35px', overflow: 'hidden', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <img src={img} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <form onSubmit={handleAddConstraint} style={{ display: 'flex', gap: '6px' }}>
+          {constraintImages.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px', padding: '4px' }}>
+              {constraintImages.map((img, idx) => (
+                <div key={idx} style={{ position: 'relative', border: '1px solid var(--panel-border)', borderRadius: '4px', width: '40px', height: '40px', overflow: 'hidden', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <img src={img} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  <button 
+                    type="button"
+                    onClick={() => setConstraintImages(prev => prev.filter((_, i) => i !== idx))}
+                    style={{ position: 'absolute', top: '1px', right: '1px', background: 'rgba(239, 68, 68, 0.85)', border: 'none', color: '#fff', borderRadius: '50%', width: '12px', height: '12px', fontSize: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <form onSubmit={handleAddConstraint} style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
             <input 
               type="text" 
               className="form-input" 
               placeholder={t('addConstraintPlaceholder')}
-              style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+              style={{ fontSize: '0.8rem', padding: '6px 10px', flex: 1 }}
               value={newConstraint}
               onChange={(e) => setNewConstraint(e.target.value)}
+              onPaste={(e) => {
+                if (e.clipboardData.files.length > 0) {
+                  e.preventDefault();
+                  handleConstraintImagesUpload(e.clipboardData.files);
+                }
+              }}
             />
+            <input 
+              id="constraint-image-input" 
+              type="file" 
+              accept="image/*" 
+              multiple
+              style={{ display: 'none' }} 
+              onChange={(e) => {
+                if (e.target.files) {
+                  handleConstraintImagesUpload(e.target.files);
+                }
+              }}
+            />
+            <button 
+              type="button"
+              className="btn"
+              style={{ padding: '6px 10px', fontSize: '0.8rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', boxShadow: 'none' }}
+              onClick={() => document.getElementById('constraint-image-input').click()}
+              title="Attach Images (Max 5)"
+            >
+              🖼️
+            </button>
             <button type="submit" className="btn" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>+</button>
           </form>
         </div>

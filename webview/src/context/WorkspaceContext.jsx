@@ -4,8 +4,10 @@ import { locales } from './locales';
 const WorkspaceContext = createContext(null);
 
 // 1. Safe VS Code API acquisition with browser fallback mock
+const isVsCode = typeof acquireVsCodeApi !== 'undefined';
+
 const vscode = (() => {
-  if (typeof acquireVsCodeApi !== 'undefined') {
+  if (isVsCode) {
     return acquireVsCodeApi();
   } else {
     console.warn('VibeGraph: Running in browser preview mode. Operations will be mocked.');
@@ -13,18 +15,34 @@ const vscode = (() => {
       postMessage: (message) => {
         console.log('[Mock VSCode Host Receive]:', message);
         if (message.command === 'ready') {
+          let savedData = null;
+          try {
+            const raw = localStorage.getItem('vibegraph_system_graph');
+            if (raw) {
+              savedData = JSON.parse(raw);
+            }
+          } catch (e) {
+            console.error('Failed to load saved graph from localStorage:', e);
+          }
           setTimeout(() => {
             window.postMessage({
               type: 'init',
-              workspaceRoot: '/mock-workspace',
-              graph: null // Start on welcome screen
+              workspaceRoot: 'Web Browser Mode',
+              graph: savedData,
+              language: navigator.language || 'zh-TW'
             }, '*');
           }, 300);
+        } else if (message.command === 'saveGraph') {
+          try {
+            localStorage.setItem('vibegraph_system_graph', JSON.stringify(message.data, null, 2));
+          } catch (e) {
+            console.error('Failed to save graph to localStorage:', e);
+          }
         } else if (message.command === 'readFiles') {
           setTimeout(() => {
             const mockFiles = {};
             message.files.forEach(f => {
-              mockFiles[f] = `// Mock code content for ${f}\nexport function mockFunc() { console.log("vibe"); }`;
+              mockFiles[f] = `// [Web App Mode] File: ${f}\n// File reading is disabled in standalone web app.`;
             });
             window.postMessage({
               type: 'filesRead',
@@ -37,8 +55,8 @@ const vscode = (() => {
             window.postMessage({
               type: 'fileWritten',
               requestId: message.requestId,
-              success: true,
-              filePath: message.filePath
+              success: false,
+              error: 'File writing is not supported in the standalone web app.'
             }, '*');
           }, 400);
         }
@@ -458,16 +476,21 @@ export function WorkspaceProvider({ children }) {
     return text;
   };
 
-  const showPrompt = (message, defaultValue = '', multiline = false) => {
+  const showPrompt = (message, defaultValue = '', multiline = false, allowImages = false) => {
     return new Promise((resolve) => {
       setModalConfig({
         type: 'prompt',
         message,
         defaultValue,
         multiline,
-        onConfirm: (val) => {
+        allowImages,
+        onConfirm: (val, images = []) => {
           setModalConfig(null);
-          resolve(val);
+          if (allowImages) {
+            resolve({ text: val, images });
+          } else {
+            resolve(val);
+          }
         },
         onCancel: () => {
           setModalConfig(null);
@@ -583,8 +606,27 @@ export function WorkspaceProvider({ children }) {
     });
   };
 
+  const exportGraphJSON = () => {
+    const graphData = {
+      glossary: glossaryRef.current,
+      globalConstraints: constraintsRef.current,
+      nodes: nodesRef.current
+    };
+    const jsonStr = JSON.stringify(graphData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'system-graph.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <WorkspaceContext.Provider value={{
+      isVsCode,
       isInitialized,
       workspaceRoot,
       nodes,
@@ -609,7 +651,8 @@ export function WorkspaceProvider({ children }) {
       showPrompt,
       showConfirm,
       showAlert,
-      importGraphJSON
+      importGraphJSON,
+      exportGraphJSON
     }}>
       {children}
       {modalConfig && <CustomModal {...modalConfig} language={language} t={t} />}
@@ -618,8 +661,9 @@ export function WorkspaceProvider({ children }) {
 }
 
 
-function CustomModal({ type, message, defaultValue, onConfirm, onCancel, language, multiline, diff, isAutoDetect, t }) {
+function CustomModal({ type, message, defaultValue, onConfirm, onCancel, language, multiline, diff, isAutoDetect, t, allowImages }) {
   const [value, setValue] = useState(defaultValue || '');
+  const [images, setImages] = useState([]);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -631,6 +675,54 @@ function CustomModal({ type, message, defaultValue, onConfirm, onCancel, languag
     }
   }, []);
 
+  const compressAndAddImages = (files) => {
+    const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (validFiles.length === 0) return;
+
+    if (images.length + validFiles.length > 5) {
+      alert(t('maxImagesLimitAlert'));
+      return;
+    }
+
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const rawBase64 = e.target.result;
+        const img = new Image();
+        img.src = rawBase64;
+        img.onload = () => {
+          const maxWidth = 800;
+          const maxHeight = 800;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > maxWidth || height > maxHeight) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+          setImages(prev => {
+            if (prev.length >= 5) return prev;
+            return [...prev, compressedBase64];
+          });
+        };
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !multiline) {
       handleSubmit();
@@ -641,7 +733,11 @@ function CustomModal({ type, message, defaultValue, onConfirm, onCancel, languag
 
   const handleSubmit = () => {
     if (type === 'prompt') {
-      onConfirm(value);
+      if (allowImages) {
+        onConfirm(value, images);
+      } else {
+        onConfirm(value);
+      }
     } else {
       onConfirm();
     }
@@ -658,38 +754,99 @@ function CustomModal({ type, message, defaultValue, onConfirm, onCancel, languag
         </div>
         
         {type === 'prompt' && (
-          multiline ? (
-            <textarea 
-              ref={inputRef}
-              className="form-input" 
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={12}
-              style={{ 
-                width: '100%', 
-                fontSize: '0.85rem', 
-                minHeight: '220px', 
-                resize: 'vertical',
-                fontFamily: 'monospace',
-                background: 'rgba(0, 0, 0, 0.4)',
-                border: '1px solid var(--panel-border)',
-                color: 'var(--text-main)',
-                borderRadius: '6px',
-                padding: '10px'
-              }}
-            />
-          ) : (
-            <input 
-              ref={inputRef}
-              type="text" 
-              className="form-input" 
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              style={{ width: '100%', fontSize: '0.9rem' }}
-            />
-          )
+          <>
+            {multiline ? (
+              <textarea 
+                ref={inputRef}
+                className="form-input" 
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                rows={12}
+                style={{ 
+                  width: '100%', 
+                  fontSize: '0.85rem', 
+                  minHeight: '220px', 
+                  resize: 'vertical',
+                  fontFamily: 'monospace',
+                  background: 'rgba(0, 0, 0, 0.4)',
+                  border: '1px solid var(--panel-border)',
+                  color: 'var(--text-main)',
+                  borderRadius: '6px',
+                  padding: '10px'
+                }}
+              />
+            ) : (
+              <input 
+                ref={inputRef}
+                type="text" 
+                className="form-input" 
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                style={{ width: '100%', fontSize: '0.9rem' }}
+              />
+            )}
+
+            {allowImages && (
+              <div style={{ marginTop: '12px' }}>
+                {images.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                    {images.map((img, idx) => (
+                      <div key={idx} style={{ position: 'relative', border: '1px solid var(--panel-border)', borderRadius: '6px', width: '60px', height: '60px', overflow: 'hidden', background: '#000' }}>
+                        <img src={img} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        <button 
+                          onClick={() => setImages(prev => prev.filter((_, i) => i !== idx))}
+                          style={{ position: 'absolute', top: '2px', right: '2px', background: 'rgba(239, 68, 68, 0.8)', border: 'none', color: '#fff', borderRadius: '50%', width: '16px', height: '16px', fontSize: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <div 
+                  className="image-dropzone"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    compressAndAddImages(e.dataTransfer.files);
+                  }}
+                  onPaste={(e) => {
+                    compressAndAddImages(e.clipboardData.files);
+                  }}
+                  onClick={() => document.getElementById('modal-image-input').click()}
+                  style={{
+                    border: '1px dashed var(--panel-border)',
+                    borderRadius: '8px',
+                    padding: '12px 10px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    background: 'rgba(0, 0, 0, 0.15)',
+                    outline: 'none',
+                    marginBottom: '14px',
+                    fontSize: '0.75rem',
+                    color: 'var(--text-muted)'
+                  }}
+                >
+                  <input 
+                    id="modal-image-input"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        compressAndAddImages(e.target.files);
+                      }
+                    }}
+                  />
+                  <span>🖼️ {t('vibeImagePlaceholder')} ({images.length}/5)</span>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {type === 'diff' && diff && (
@@ -781,12 +938,12 @@ function CustomModal({ type, message, defaultValue, onConfirm, onCancel, languag
                 <div className="diff-list">
                   {diff.constraintChanges.added.map((item, idx) => (
                     <div className="diff-item added" key={idx}>
-                      + {item}
+                      + {typeof item === 'object' && item !== null ? `${item.text || ''} ${item.vibeImages && item.vibeImages.length > 0 ? `(🖼️ x${item.vibeImages.length})` : ''}` : item}
                     </div>
                   ))}
                   {diff.constraintChanges.deleted.map((item, idx) => (
                     <div className="diff-item deleted" key={idx}>
-                      - {item}
+                      - {typeof item === 'object' && item !== null ? `${item.text || ''} ${item.vibeImages && item.vibeImages.length > 0 ? `(🖼️ x${item.vibeImages.length})` : ''}` : item}
                     </div>
                   ))}
                 </div>
@@ -1001,12 +1158,14 @@ function getGraphDiff(oldGraph, newGraph) {
 
   // Constraints
   for (const c of newConstraints) {
-    if (!oldConstraints.includes(c)) {
+    const exists = oldConstraints.some(oldC => JSON.stringify(oldC) === JSON.stringify(c));
+    if (!exists) {
       constraintChanges.added.push(c);
     }
   }
   for (const c of oldConstraints) {
-    if (!newConstraints.includes(c)) {
+    const exists = newConstraints.some(newC => JSON.stringify(newC) === JSON.stringify(c));
+    if (!exists) {
       constraintChanges.deleted.push(c);
     }
   }

@@ -75,7 +75,7 @@
   "scripts": {
     "webview-install": "cd webview && npm install",
     "webview-build": "cd webview && npm run build",
-    "package": "npm run webview-build && vsce package"
+    "package": "npm run webview-build && npx @vscode/vsce package"
   },
   "devDependencies": {
     "@types/vscode": "^1.60.0"

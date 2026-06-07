@@ -10,6 +10,9 @@ export const locales = {
     promptGoalPrompt: "請描述您要建造的系統想法：",
     promptCopiedAlert: "✓ 初始提示詞已複製！請貼給您的 AI 執行建圖，執行後地圖會自動重載。",
     importGraphBtn: "匯入 / 貼上系統架構 JSON 📥",
+    exportGraphBtn: "匯出系統架構 JSON 📤",
+    webModeLockApplyCode: "在獨立 Web 網頁模式中，無法直接寫入實體檔案。請複製上方的實作 Prompt 以呼叫 AI 進行實作，並在 VS Code 套件中使用完整功能。",
+    webModeLockFilePath: "本機檔案系統讀寫需要配合 VS Code 延伸模組",
     pasteJsonPrompt: "請在下方貼上 AI 生成的 system-graph.json 內容：",
     invalidGraphJsonErr: "無效的架構 JSON：{msg}",
     importFailedAlert: "匯入失敗：",
@@ -93,6 +96,7 @@ export const locales = {
     labelVibeImage: "🟢 參考圖片 / Mockup (Vibe Image)",
     vibeImagePlaceholder: "拖曳圖片至此，或點擊選擇檔案、或在此區域貼上(Ctrl+V)圖片",
     btnDeleteImage: "刪除圖片 🗑️",
+    maxImagesLimitAlert: "❌ 圖片上傳上限為 5 張！",
 
     // Prompt Compiler
     compilerTitle: "⚡ Prompt 核心編譯器",
@@ -138,6 +142,9 @@ export const locales = {
     promptGoalPrompt: "Describe the system vision you want to build:",
     promptCopiedAlert: "✓ Bootstrap Prompt copied! Paste it in your AI chat to generate the graph, the UI will reload automatically.",
     importGraphBtn: "Import / Paste Graph JSON 📥",
+    exportGraphBtn: "Export Graph JSON 📤",
+    webModeLockApplyCode: "Writing code directly to files is only supported inside the VS Code Extension. In web preview mode, please copy the compiled prompt above to implement features.",
+    webModeLockFilePath: "File system access requires the VS Code Extension",
     pasteJsonPrompt: "Paste the AI-generated system-graph.json below:",
     invalidGraphJsonErr: "Invalid Graph JSON: {msg}",
     importFailedAlert: "Import failed: ",
@@ -221,6 +228,7 @@ export const locales = {
     labelVibeImage: "🟢 Reference Image / Mockup",
     vibeImagePlaceholder: "Drag & drop image here, click to upload, or paste (Ctrl+V) in this zone",
     btnDeleteImage: "Remove Image 🗑️",
+    maxImagesLimitAlert: "❌ Maximum limit is 5 images!",
 
     // Prompt Compiler
     compilerTitle: "⚡ Prompt Compiler",

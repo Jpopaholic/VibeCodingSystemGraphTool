@@ -3,6 +3,7 @@ import { useWorkspace } from '../context/WorkspaceContext';
 
 export default function NodeEditor({ activeNode, onDeleteNode }) {
   const { 
+    isVsCode,
     nodes: graphNodes, 
     updateNode, 
     openFile,
@@ -75,7 +76,7 @@ export default function NodeEditor({ activeNode, onDeleteNode }) {
   // Handle saving Layer 1 & 2 values
   const handleSaveField = (key, value) => {
     const updatedNode = { ...activeNode };
-    if (key === 'name' || key === 'produce' || key === 'vibeNotes' || key === 'vibeImage') {
+    if (key === 'name' || key === 'produce' || key === 'vibeNotes' || key === 'vibeImage' || key === 'vibeImages') {
       updatedNode[key] = value;
     } else if (key === 'filePath' || key === 'status') {
       updatedNode.synthesis = {
@@ -86,40 +87,75 @@ export default function NodeEditor({ activeNode, onDeleteNode }) {
     updateNode(updatedNode);
   };
 
-  const handleImageUpload = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const rawBase64 = e.target.result;
-      
-      const img = new Image();
-      img.src = rawBase64;
-      img.onload = () => {
-        const maxWidth = 800;
-        const maxHeight = 800;
-        let width = img.width;
-        let height = img.height;
-        
-        if (width > maxWidth || height > maxHeight) {
-          if (width > height) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
-          } else {
-            width = Math.round((width * maxHeight) / height);
-            height = maxHeight;
+  const handleImagesUpload = (files) => {
+    const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (validFiles.length === 0) return;
+
+    const existingImages = activeNode.vibeImages || (activeNode.vibeImage ? [activeNode.vibeImage] : []);
+    if (existingImages.length + validFiles.length > 5) {
+      alert(t('maxImagesLimitAlert'));
+      return;
+    }
+
+    let processedCount = 0;
+    const newImages = [];
+
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const rawBase64 = e.target.result;
+        const img = new Image();
+        img.src = rawBase64;
+        img.onload = () => {
+          const maxWidth = 800;
+          const maxHeight = 800;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > maxWidth || height > maxHeight) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
           }
-        }
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
-        handleSaveField('vibeImage', compressedBase64);
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+          newImages.push(compressedBase64);
+          processedCount++;
+
+          if (processedCount === validFiles.length) {
+            const finalImages = [...existingImages, ...newImages].slice(0, 5);
+            const updatedNode = { 
+              ...activeNode, 
+              vibeImages: finalImages,
+              vibeImage: finalImages[0] || ''
+            };
+            updateNode(updatedNode);
+          }
+        };
       };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleDeleteImage = (index) => {
+    const existingImages = activeNode.vibeImages || (activeNode.vibeImage ? [activeNode.vibeImage] : []);
+    const finalImages = existingImages.filter((_, i) => i !== index);
+    const updatedNode = {
+      ...activeNode,
+      vibeImages: finalImages,
+      vibeImage: finalImages[0] || ''
     };
-    reader.readAsDataURL(file);
+    updateNode(updatedNode);
   };
 
   // Handle saving manual Synthesis overrides
@@ -236,78 +272,99 @@ export default function NodeEditor({ activeNode, onDeleteNode }) {
         {/* Layer 1: vibeImage */}
         <div className="form-group">
           <label className="form-label">{t('labelVibeImage')}</label>
-          {activeNode.vibeImage ? (
-            <div className="image-preview-container" style={{ position: 'relative', border: '1px solid var(--panel-border)', borderRadius: '8px', overflow: 'hidden', background: '#09090d', padding: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <img 
-                src={activeNode.vibeImage} 
-                alt="Vibe Mockup" 
-                style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '180px', objectFit: 'contain', borderRadius: '6px' }} 
-              />
-              <button 
-                className="btn" 
-                style={{ 
-                  marginTop: '10px',
-                  width: '100%',
-                  padding: '6px 12px', 
-                  fontSize: '0.75rem', 
-                  background: 'rgba(239, 68, 68, 0.15)', 
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  color: '#ef4444',
-                  boxShadow: 'none' 
-                }}
-                onClick={() => handleSaveField('vibeImage', '')}
-              >
-                {t('btnDeleteImage')}
-              </button>
-            </div>
-          ) : (
-            <div 
-              className="image-dropzone"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                const file = e.dataTransfer.files[0];
-                if (file && file.type.startsWith('image/')) {
-                  handleImageUpload(file);
-                }
-              }}
-              onPaste={(e) => {
-                const file = Array.from(e.clipboardData.files).find(f => f.type.startsWith('image/'));
-                if (file) {
-                  handleImageUpload(file);
-                }
-              }}
-              tabIndex={0}
-              style={{
-                border: '1px dashed var(--panel-border)',
-                borderRadius: '8px',
-                padding: '20px 10px',
-                textAlign: 'center',
-                cursor: 'pointer',
-                background: 'rgba(0, 0, 0, 0.15)',
-                outline: 'none',
-                transition: 'var(--transition-smooth)'
-              }}
-              onClick={() => document.getElementById('vibe-image-input').click()}
-            >
-              <input 
-                id="vibe-image-input" 
-                type="file" 
-                accept="image/*" 
-                style={{ display: 'none' }} 
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    handleImageUpload(file);
-                  }
-                }}
-              />
-              <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>🖼️</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-                {t('vibeImagePlaceholder')}
-              </div>
-            </div>
-          )}
+          {(() => {
+            const currentImages = activeNode.vibeImages || (activeNode.vibeImage ? [activeNode.vibeImage] : []);
+            return (
+              <>
+                {currentImages.length > 0 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(65px, 1fr))', gap: '8px', marginBottom: '12px' }}>
+                    {currentImages.map((img, idx) => (
+                      <div key={idx} style={{ position: 'relative', border: '1px solid var(--panel-border)', borderRadius: '6px', height: '65px', overflow: 'hidden', background: '#09090d', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img 
+                          src={img} 
+                          alt={`Vibe Mockup ${idx + 1}`} 
+                          style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                        />
+                        <button 
+                          className="btn" 
+                          style={{ 
+                            position: 'absolute', 
+                            top: '2px', 
+                            right: '2px', 
+                            padding: 0,
+                            width: '18px',
+                            height: '18px',
+                            fontSize: '10px', 
+                            background: 'rgba(239, 68, 68, 0.85)', 
+                            border: 'none',
+                            color: '#fff',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: 'none',
+                            cursor: 'pointer',
+                            zIndex: 10
+                          }}
+                          onClick={() => handleDeleteImage(idx)}
+                          title={t('btnDeleteImage')}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {currentImages.length < 5 ? (
+                  <div 
+                    className="image-dropzone"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      handleImagesUpload(e.dataTransfer.files);
+                    }}
+                    onPaste={(e) => {
+                      handleImagesUpload(e.clipboardData.files);
+                    }}
+                    tabIndex={0}
+                    style={{
+                      border: '1px dashed var(--panel-border)',
+                      borderRadius: '8px',
+                      padding: '16px 10px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      background: 'rgba(0, 0, 0, 0.15)',
+                      outline: 'none',
+                      transition: 'var(--transition-smooth)'
+                    }}
+                    onClick={() => document.getElementById('vibe-image-input').click()}
+                  >
+                    <input 
+                      id="vibe-image-input" 
+                      type="file" 
+                      accept="image/*" 
+                      multiple
+                      style={{ display: 'none' }} 
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          handleImagesUpload(e.target.files);
+                        }
+                      }}
+                    />
+                    <div style={{ fontSize: '1.2rem', marginBottom: '4px' }}>🖼️</div>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: '1.3' }}>
+                      {t('vibeImagePlaceholder')} ({currentImages.length}/5)
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', padding: '10px', background: 'rgba(0,0,0,0.1)', borderRadius: '6px', border: '1px solid var(--panel-border)' }}>
+                    {language === 'en' ? '✅ Max image limit (5) reached' : '✅ 已達到圖片上傳上限 (5張)'}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         {/* Layer 1: Dependencies List */}
@@ -450,17 +507,26 @@ export default function NodeEditor({ activeNode, onDeleteNode }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-dark)', fontWeight: 'bold' }}>{t('labelFilePath')} </span>
-                  <span 
-                    style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: 'var(--text-main)', cursor: 'pointer', textDecoration: 'underline' }}
-                    onClick={() => {
-                      if (filePath) {
-                        openFile(filePath);
-                      }
-                    }}
-                    title={language === 'en' ? 'Click to open this file in editor' : '點擊可在編輯器中開啟此檔案'}
-                  >
-                    {filePath || t('filePathEmpty')}
-                  </span>
+                  {isVsCode ? (
+                    <span 
+                      style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: 'var(--text-main)', cursor: 'pointer', textDecoration: 'underline' }}
+                      onClick={() => {
+                        if (filePath) {
+                          openFile(filePath);
+                        }
+                      }}
+                      title={language === 'en' ? 'Click to open this file in editor' : '點擊可在編輯器中開啟此檔案'}
+                    >
+                      {filePath || t('filePathEmpty')}
+                    </span>
+                  ) : (
+                    <span 
+                      style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}
+                      title={t('webModeLockFilePath')}
+                    >
+                      {filePath || t('filePathEmpty')}
+                    </span>
+                  )}
                 </div>
                 
                 {intentSignal && (

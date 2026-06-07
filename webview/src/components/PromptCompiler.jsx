@@ -3,6 +3,7 @@ import { useWorkspace } from '../context/WorkspaceContext';
 
 export default function PromptCompiler({ activeNode }) {
   const { 
+    isVsCode,
     nodes: graphNodes, 
     glossary, 
     globalConstraints, 
@@ -144,11 +145,20 @@ export default function PromptCompiler({ activeNode }) {
 
       // Build context components
       const glossaryContext = Object.entries(glossary)
-        .map(([k, v]) => `- **${k}**: ${v}`)
+        .map(([k, v]) => '- **' + k + '**: ' + v)
         .join('\n');
 
       const globalConstraintsContext = globalConstraints
-        .map(c => `- ${c}`)
+        .map(c => {
+          if (typeof c === 'object' && c !== null) {
+            let desc = '- ' + (c.text || '');
+            if (c.vibeImages && c.vibeImages.length > 0) {
+              desc += ' (附帶 ' + c.vibeImages.length + ' 張參考圖片 / Includes ' + c.vibeImages.length + ' reference images)';
+            }
+            return desc;
+          }
+          return '- ' + c;
+        })
         .join('\n');
 
       const dependenciesContext = (activeNode.dependencies || []).map(depId => {
@@ -162,35 +172,25 @@ export default function PromptCompiler({ activeNode }) {
 
         if (language === 'en') {
           if (isCompleted && hasCode) {
-            return `### 📦 Completed Dependency: ${depNode.name} (${depPath})
-\`\`\`javascript
-// Path: ${depPath}
-\`\`\``;
+            return '### 📦 Completed Dependency: ' + depNode.name + ' (' + depPath + ')\n```javascript\n// Path: ' + depPath + '\n```';
           } else if (hasCode) {
             return t('promptDepSkeleton', { name: depNode.name, path: depPath });
           } else {
-            return `### ⏳ Pending Dependency: ${depNode.name}
-- Expected output (produce): ${depNode.produce}
-- Intent: ${depNode.synthesis?.intentSignal || depNode.intent || 'Not defined yet'}`;
+            return '### ⏳ Pending Dependency: ' + depNode.name + '\n- Expected output (produce): ' + depNode.produce + '\n- Intent: ' + (depNode.synthesis?.intentSignal || depNode.intent || 'Not defined yet');
           }
         } else {
           if (isCompleted && hasCode) {
-            return `### 📦 已完成的前置組件: ${depNode.name} (${depPath})
-\`\`\`javascript
-// Path: ${depPath}
-\`\`\``;
+            return '### 📦 已完成的前置組件: ' + depNode.name + ' (' + depPath + ')\n```javascript\n// Path: ' + depPath + '\n```';
           } else if (hasCode) {
             return t('promptDepSkeleton', { name: depNode.name, path: depPath });
           } else {
-            return `### ⏳ 待辦的前置組件: ${depNode.name}
-- 預期產出 (produce): ${depNode.produce}
-- 核心意圖: ${depNode.synthesis?.intentSignal || depNode.intent || '尚未定義'}`;
+            return '### ⏳ 待辦的前置組件: ' + depNode.name + '\n- 預期產出 (produce): ' + depNode.produce + '\n- 核心意圖: ' + (depNode.synthesis?.intentSignal || depNode.intent || '尚未定義');
           }
         }
       }).filter(text => text.length > 0).join('\n\n');
 
       const intentSignal = activeNode.synthesis?.intentSignal || '';
-      const constraints = (activeNode.synthesis?.extractedConstraints || []).map(c => `- ${c}`).join('\n');
+      const constraints = (activeNode.synthesis?.extractedConstraints || []).map(c => '- ' + c).join('\n');
 
       const activeTemplatePrompt = activeNodeCode
         ? t('promptActiveNodeTemplate', { path: activeFilePath })
@@ -224,9 +224,34 @@ export default function PromptCompiler({ activeNode }) {
         templatePreservationZh += '\n* 備註：開發隨筆中提到了需要參考/使用外部檔案，但目前未提供。請協助為我規劃並生成該外部檔案（或範本骨架）的程式碼結構與模組設計。';
       }
 
-      const imgNotice = activeNode.vibeImage
-        ? t('imgPromptNotice')
-        : '';
+      const nodeImages = activeNode.vibeImages || (activeNode.vibeImage ? [activeNode.vibeImage] : []);
+      const imgNotice = nodeImages.length > 0 ? t('imgPromptNotice') : '';
+
+      let visualReferencesPrompt = '';
+      if (nodeImages.length > 0) {
+        visualReferencesPrompt = language === 'en'
+          ? '\n## 🎨 Component Visual References\nThis component has visual reference mockups attached. Please inspect the pasted images and strictly match their layout, style, and structure:\n'
+          : '\n## 🎨 組件畫面參考 (Visual Reference)\n此組件附帶 UI 畫面或圖片參考。請在編寫程式碼時，詳細參考圖片中的排版、視覺風格與元件結構：\n';
+        
+        nodeImages.forEach((img, idx) => {
+          visualReferencesPrompt += '\nImage ' + (idx + 1) + ':\n' + img + '\n';
+        });
+      }
+
+      let globalImgNotice = '';
+      const globalConstraintsWithImages = globalConstraints.filter(c => typeof c === 'object' && c !== null && c.vibeImages && c.vibeImages.length > 0);
+      if (globalConstraintsWithImages.length > 0) {
+        globalImgNotice = language === 'en'
+          ? '\n## 🌐 Global Visual References\nSome global constraints have visual references. Please refer to them when writing code:\n'
+          : '\n## 🌐 全局畫面參考\n以下全域約束條件附帶圖片參考。請在接收到對應圖片時，詳細參考圖片中的排版、視覺風格與元件結構：\n';
+        
+        globalConstraintsWithImages.forEach(c => {
+          globalImgNotice += '\nConstraint: "' + c.text + '"\n';
+          c.vibeImages.forEach((img, idx) => {
+            globalImgNotice += '\nImage ' + (idx + 1) + ':\n' + img + '\n';
+          });
+        });
+      }
 
       // Generate final prompt text
       const promptText = language === 'en'
@@ -242,35 +267,31 @@ export default function PromptCompiler({ activeNode }) {
 ${activeTemplatePrompt}
 ${importedTemplatesPrompt}
 ${imgNotice}
+${visualReferencesPrompt}
+${globalImgNotice}
 ---
 
 ## 🧠 Memos & Vibe Notes
-${rawNotes ? `### Developer Memos:\n${rawNotes}\n` : ''}
-${intentSignal ? `### AI Distilled Intent (Intent Signal):\n${intentSignal}\n` : ''}
-${constraints ? `### Key Technical Constraints:\n${constraints}\n` : ''}
-
+${rawNotes ? `### Developer Memos:\n${rawNotes}\n` : ''}${intentSignal ? `### AI Distilled Intent (Intent Signal):\n${intentSignal}\n` : ''}${constraints ? `### Key Technical Constraints:\n${constraints}\n` : ''}
 ---
 
 ## 🌐 Global Constraints
 ${globalConstraintsContext || 'No global constraints.'}
-
 ---
 
 ## 📖 Glossary / Terminology
 When writing the code, you **must** use the following defined business terms and data structures. Do NOT invent conflicting synonyms:
 ${glossaryContext || 'No glossary terms defined.'}
-
 ---
 
 ## 🔗 Dependency Modules (Dependencies)
 This component is related to the following components. If a dependency is completed or has a skeleton file on disk, read its actual source code structure and integrate/invoke it accordingly. If it is pending with no template, follow its interface contract:
 ${dependenciesContext || 'No dependencies.'}
-
 ---
 
 ## 📝 Implementation Output Requirements
 1. **Module Decoupling**: This component must be a highly cohesive, loosely coupled independent module, transferring data only through agreed interfaces and dependencies.
-2. **Path Declaration**: You must explicitly annotate the target path at the very top of the code as a comment: \x60// Path: [recommended target file path]\x60.
+2. **Path Declaration**: You must explicitly annotate the target path at the very top of the code as a comment: \`// Path: [recommended target file path]\`.
 3. **Template Preservation / Generation**: ${templatePreservationEn}
 4. **Output Code Only**: Output the complete, copy-paste ready code content directly without wrapping it in conversational text.
 `
@@ -286,37 +307,33 @@ ${dependenciesContext || 'No dependencies.'}
 ${activeTemplatePrompt}
 ${importedTemplatesPrompt}
 ${imgNotice}
+${visualReferencesPrompt}
+${globalImgNotice}
 ---
 
 ## 🧠 設計隨筆與開發備忘 (Vibe Notes)
-${rawNotes ? `### 開發者原始備忘：\\n${rawNotes}\\n` : ''}
-${intentSignal ? `### AI 精煉意圖 (Intent Signal)：\\n${intentSignal}\\n` : ''}
-${constraints ? `### 關鍵技術約束：\\n${constraints}\\n` : ''}
-
+${rawNotes ? `### 開發者原始備忘：\n${rawNotes}\n` : ''}${intentSignal ? `### AI 精煉意圖 (Intent Signal)：\n${intentSignal}\n` : ''}${constraints ? `### 關鍵技術約束：\n${constraints}\n` : ''}
 ---
 
 ## 🌐 全局專案約束 (Global Constraints)
 ${globalConstraintsContext || '無全局約束。'}
-
 ---
 
 ## 📖 業務名詞定義表 (Glossary)
 在編寫程式碼時，**必須**使用以下定義的業務名詞與資料結構，嚴禁發明混淆的同義詞：
 ${glossaryContext || '無特別定義名詞。'}
-
 ---
 
 ## 🔗 前置依賴模組 (Dependencies)
 本組件與以下組件有關聯。如果是已完成組件或已有結構骨架的組件，請閱讀其真實程式碼並相應地進行整合與呼叫；如果是尚未建立的組件，請遵循其接口契約：
 ${dependenciesContext || '無前置依賴組件。'}
-
 ---
 
 ## 📝 實作輸出要求
 1. **模組解耦**：本組件必須是一個高內聚、低耦合的獨立模組，只透過約定的接口與依賴項進行數據傳遞。
-2. **路徑聲明**：請在程式碼最上方以註解明確標註建議的路徑：\x60// Path: [建議的檔案路徑]\x60。
+2. **路詢聲明**：請在程式碼最上方以註解明確標註建議的路徑：\`// Path: [建議的檔案路徑]\`。
 3. **結構與範本繼承 / 從零生成**：${templatePreservationZh}
-4. **只輸出代碼**：直接輸出完整的程式碼內容，方便拷貝。
+4. **只輸出代碼**：直接輸出完整的程式碼內容，方便貼上。
 `;
 
       setCompiledPrompt(promptText);
@@ -378,10 +395,26 @@ ${dependenciesContext || '無前置依賴組件。'}
     }
   };
 
-  const handleCopyImage = async () => {
-    if (!activeNode.vibeImage) return;
+  const handleCopySpecificImage = async (base64Str) => {
+    if (!base64Str) return;
     try {
-      const pngBlob = await convertBase64ToPngBlob(activeNode.vibeImage);
+      const pngBlob = await convertBase64ToPngBlob(base64Str);
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'image/png': pngBlob
+        })
+      ]);
+      showNotification(t('copiedImageAlert'), '#10b981');
+    } catch (err) {
+      await showAlert(t('copyImageFailedAlert') + err.message);
+    }
+  };
+
+  const handleCopyImage = async () => {
+    const currentImages = activeNode.vibeImages || (activeNode.vibeImage ? [activeNode.vibeImage] : []);
+    if (currentImages.length === 0) return;
+    try {
+      const pngBlob = await convertBase64ToPngBlob(currentImages[0]);
       await navigator.clipboard.write([
         new ClipboardItem({
           'image/png': pngBlob
@@ -449,11 +482,85 @@ ${dependenciesContext || '無前置依賴組件。'}
 
       {compiledPrompt ? (
         <div className="prompt-box">
-          {activeNode.vibeImage && (
-            <div className="compiled-image-preview" style={{ marginBottom: '14px', border: '1px solid var(--panel-border)', borderRadius: '8px', overflow: 'hidden', background: '#000', display: 'flex', justifyContent: 'center' }}>
-              <img src={activeNode.vibeImage} alt="Vibe Mockup" style={{ width: '100%', height: 'auto', display: 'block', maxHeight: '150px', objectFit: 'contain' }} />
-            </div>
-          )}
+          {/* Active Node Images Previews */}
+          {(() => {
+            const currentImages = activeNode.vibeImages || (activeNode.vibeImage ? [activeNode.vibeImage] : []);
+            if (currentImages.length === 0) return null;
+            return (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+                {currentImages.map((img, idx) => (
+                  <div key={idx} style={{ position: 'relative', border: '1px solid var(--panel-border)', borderRadius: '8px', overflow: 'hidden', background: '#000', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={img} alt={`Vibe Mockup ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    <button 
+                      className="btn" 
+                      style={{ 
+                        position: 'absolute', 
+                        bottom: '2px', 
+                        right: '2px', 
+                        padding: '2px 4px', 
+                        fontSize: '9px', 
+                        background: '#10b981', 
+                        color: '#fff', 
+                        border: 'none', 
+                        borderRadius: '3px',
+                        boxShadow: 'none',
+                        cursor: 'pointer',
+                        zIndex: 10
+                      }} 
+                      onClick={() => handleCopySpecificImage(img)}
+                      title={t('btnCopyImage')}
+                    >
+                      📋
+                    </button>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Global Constraint Images Previews */}
+          {(() => {
+            const globalImages = globalConstraints
+              .filter(c => typeof c === 'object' && c !== null && c.vibeImages && c.vibeImages.length > 0)
+              .flatMap(c => c.vibeImages);
+            if (globalImages.length === 0) return null;
+            return (
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                  {language === 'en' ? '🌐 Global constraint images:' : '🌐 全局約束圖片：'}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {globalImages.map((img, idx) => (
+                    <div key={idx} style={{ position: 'relative', border: '1px solid var(--panel-border)', borderRadius: '8px', overflow: 'hidden', background: '#000', width: '80px', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <img src={img} alt={`Global Mockup ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      <button 
+                        className="btn" 
+                        style={{ 
+                          position: 'absolute', 
+                          bottom: '2px', 
+                          right: '2px', 
+                          padding: '2px 4px', 
+                          fontSize: '9px', 
+                          background: '#10b981', 
+                          color: '#fff', 
+                          border: 'none', 
+                          borderRadius: '3px',
+                          boxShadow: 'none',
+                          cursor: 'pointer',
+                          zIndex: 10
+                        }} 
+                        onClick={() => handleCopySpecificImage(img)}
+                        title={t('btnCopyImage')}
+                      >
+                        📋
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           <textarea 
             className="form-input" 
             style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', minHeight: '120px', background: '#050508' }}
@@ -464,11 +571,14 @@ ${dependenciesContext || '無前置依賴組件。'}
             <button className="btn" onClick={handleCopyPrompt}>
               {t('btnCopyPrompt')}
             </button>
-            {activeNode.vibeImage && (
-              <button className="btn" style={{ background: '#10b981', flex: 'none' }} onClick={handleCopyImage}>
-                {t('btnCopyImage')}
-              </button>
-            )}
+            {(() => {
+              const currentImages = activeNode.vibeImages || (activeNode.vibeImage ? [activeNode.vibeImage] : []);
+              return currentImages.length > 0 && (
+                <button className="btn" style={{ background: '#10b981', flex: 'none' }} onClick={handleCopyImage}>
+                  {t('btnCopyImage')}
+                </button>
+              );
+            })()}
             <button 
               className="btn" 
               style={{ background: '#374151', flex: 'none', width: '80px' }}
@@ -491,33 +601,51 @@ ${dependenciesContext || '無前置依賴組件。'}
       {/* Apply Code Section */}
       <div className="apply-code-section" style={{ marginTop: '20px', borderTop: '1px solid var(--panel-border)', paddingTop: '20px' }}>
         <div className="form-label" style={{ color: 'var(--color-success)' }}>{t('applyCodeTitle')}</div>
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: '1.4' }}>
-          {t('applyCodeDesc')}
-        </p>
-        <div className="form-group">
-          <input 
-            type="text" 
-            className="form-input" 
-            placeholder={t('applyPathPlaceholder')}
-            style={{ fontSize: '0.8rem', padding: '6px 10px', marginBottom: '8px' }}
-            value={targetPath}
-            onChange={(e) => setTargetPath(e.target.value)}
-          />
-          <textarea 
-            className="form-input apply-textarea" 
-            placeholder={t('applyTextareaPlaceholder')}
-            style={{ minHeight: '100px', fontSize: '0.75rem', fontFamily: 'monospace' }}
-            value={codeToApply}
-            onChange={(e) => setCodeToApply(e.target.value)}
-          />
-        </div>
-        <button 
-          className="btn" 
-          style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, var(--color-success), #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.2)' }}
-          onClick={handleApplyCode}
-        >
-          {t('btnApplyCode')}
-        </button>
+        {!isVsCode ? (
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px dashed var(--panel-border)',
+            borderRadius: '8px',
+            padding: '16px',
+            textAlign: 'center',
+            marginTop: '8px'
+          }}>
+            <span style={{ fontSize: '1.3rem', display: 'block', marginBottom: '8px' }}>🔒</span>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+              {t('webModeLockApplyCode')}
+            </p>
+          </div>
+        ) : (
+          <>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: '1.4' }}>
+              {t('applyCodeDesc')}
+            </p>
+            <div className="form-group">
+              <input 
+                type="text" 
+                className="form-input" 
+                placeholder={t('applyPathPlaceholder')}
+                style={{ fontSize: '0.8rem', padding: '6px 10px', marginBottom: '8px' }}
+                value={targetPath}
+                onChange={(e) => setTargetPath(e.target.value)}
+              />
+              <textarea 
+                className="form-input apply-textarea" 
+                placeholder={t('applyTextareaPlaceholder')}
+                style={{ minHeight: '100px', fontSize: '0.75rem', fontFamily: 'monospace' }}
+                value={codeToApply}
+                onChange={(e) => setCodeToApply(e.target.value)}
+              />
+            </div>
+            <button 
+              className="btn" 
+              style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, var(--color-success), #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.2)' }}
+              onClick={handleApplyCode}
+            >
+              {t('btnApplyCode')}
+            </button>
+          </>
+        )}
       </div>
 
     </div>
