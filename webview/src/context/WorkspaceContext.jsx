@@ -148,10 +148,34 @@ export function WorkspaceProvider({ children }) {
                 ? Object.entries(message.graph.globalConstraints).map(([k, v]) => `${k}: ${v}`)
                 : [];
             
+            const incomingGlossary = message.graph.glossary || {};
+            const incomingNodesRaw = message.graph.nodes || [];
+
+            const glossaryChanged = isGlossaryChanged(glossaryRef.current, incomingGlossary);
+            const constraintsChanged = isGlobalConstraintsChanged(constraintsRef.current, incomingConstraints);
+
+            let finalNodes = incomingNodesRaw;
+            if (glossaryChanged || constraintsChanged) {
+              finalNodes = incomingNodesRaw.map(node => {
+                if (node.synthesis?.status !== 'todo') {
+                  return {
+                    ...node,
+                    synthesis: {
+                      ...(node.synthesis || {}),
+                      status: 'todo'
+                    }
+                  };
+                }
+                return node;
+              });
+            } else {
+              finalNodes = getAdjustedNodesWithTodoPropagation(nodesRef.current, incomingNodesRaw);
+            }
+
             const incomingGraph = {
-              glossary: message.graph.glossary || {},
+              glossary: incomingGlossary,
               globalConstraints: incomingConstraints,
-              nodes: message.graph.nodes || []
+              nodes: finalNodes
             };
 
             const incomingStr = JSON.stringify(incomingGraph);
@@ -170,9 +194,14 @@ export function WorkspaceProvider({ children }) {
 
             const diff = getGraphDiff(oldGraph, incomingGraph);
 
-            setGlossary(incomingGraph.glossary);
+            setGlossary(incomingGlossary);
             setGlobalConstraints(incomingConstraints);
-            setNodes(incomingGraph.nodes);
+            setNodes(finalNodes);
+
+            const hasStatusAdjustments = JSON.stringify(incomingNodesRaw) !== JSON.stringify(finalNodes);
+            if (hasStatusAdjustments) {
+              saveGraph(incomingGlossary, incomingConstraints, finalNodes);
+            }
 
             if (diff.hasChanges) {
               showDiffModal(diff, oldGraph, true);
@@ -287,13 +316,47 @@ export function WorkspaceProvider({ children }) {
 
 
   const updateGlossary = (newGlossary) => {
+    const changed = isGlossaryChanged(glossaryRef.current, newGlossary);
+    let updatedNodes = nodes;
+    if (changed) {
+      updatedNodes = nodes.map(node => {
+        if (node.synthesis?.status !== 'todo') {
+          return {
+            ...node,
+            synthesis: {
+              ...(node.synthesis || {}),
+              status: 'todo'
+            }
+          };
+        }
+        return node;
+      });
+      setNodes(updatedNodes);
+    }
     setGlossary(newGlossary);
-    saveGraph(newGlossary, globalConstraints, nodes);
+    saveGraph(newGlossary, globalConstraints, updatedNodes);
   };
 
   const updateGlobalConstraints = (newConstraints) => {
+    const changed = isGlobalConstraintsChanged(constraintsRef.current, newConstraints);
+    let updatedNodes = nodes;
+    if (changed) {
+      updatedNodes = nodes.map(node => {
+        if (node.synthesis?.status !== 'todo') {
+          return {
+            ...node,
+            synthesis: {
+              ...(node.synthesis || {}),
+              status: 'todo'
+            }
+          };
+        }
+        return node;
+      });
+      setNodes(updatedNodes);
+    }
     setGlobalConstraints(newConstraints);
-    saveGraph(glossary, newConstraints, nodes);
+    saveGraph(glossary, newConstraints, updatedNodes);
   };
 
   const addNode = (newNodeSpec) => {
@@ -320,29 +383,32 @@ export function WorkspaceProvider({ children }) {
   };
 
   const updateNode = (updatedNode) => {
-    const updatedNodes = nodes.map(n => n.id === updatedNode.id ? updatedNode : n);
+    const rawUpdatedNodes = nodes.map(n => n.id === updatedNode.id ? updatedNode : n);
+    const updatedNodes = getAdjustedNodesWithTodoPropagation(nodesRef.current, rawUpdatedNodes);
     setNodes(updatedNodes);
     saveGraph(glossary, globalConstraints, updatedNodes);
   };
 
   const deleteNode = (nodeId) => {
-    let updatedNodes = nodes.filter(n => n.id !== nodeId);
+    let rawUpdatedNodes = nodes.filter(n => n.id !== nodeId);
     // Cascade remove dependencies
-    updatedNodes = updatedNodes.map(n => ({
+    rawUpdatedNodes = rawUpdatedNodes.map(n => ({
       ...n,
       dependencies: (n.dependencies || []).filter(id => id !== nodeId)
     }));
+    const updatedNodes = getAdjustedNodesWithTodoPropagation(nodesRef.current, rawUpdatedNodes);
     setNodes(updatedNodes);
     saveGraph(glossary, globalConstraints, updatedNodes);
   };
 
   const updateDependencies = (nodeId, newDeps) => {
-    const updatedNodes = nodes.map(n => {
+    const rawUpdatedNodes = nodes.map(n => {
       if (n.id === nodeId) {
         return { ...n, dependencies: newDeps };
       }
       return n;
     });
+    const updatedNodes = getAdjustedNodesWithTodoPropagation(nodesRef.current, rawUpdatedNodes);
     setNodes(updatedNodes);
     saveGraph(glossary, globalConstraints, updatedNodes);
   };
@@ -435,6 +501,27 @@ export function WorkspaceProvider({ children }) {
       }
       const updatedNodes = Array.isArray(parsed.nodes) ? parsed.nodes : [];
 
+      const glossaryChanged = isGlossaryChanged(glossaryRef.current, updatedGlossary);
+      const constraintsChanged = isGlobalConstraintsChanged(constraintsRef.current, updatedConstraints);
+
+      let finalNodes = updatedNodes;
+      if (glossaryChanged || constraintsChanged) {
+        finalNodes = updatedNodes.map(node => {
+          if (node.synthesis?.status !== 'todo') {
+            return {
+              ...node,
+              synthesis: {
+                ...(node.synthesis || {}),
+                status: 'todo'
+              }
+            };
+          }
+          return node;
+        });
+      } else {
+        finalNodes = getAdjustedNodesWithTodoPropagation(nodesRef.current, updatedNodes);
+      }
+
       const oldGraph = {
         nodes: nodesRef.current,
         glossary: glossaryRef.current,
@@ -442,7 +529,7 @@ export function WorkspaceProvider({ children }) {
       };
 
       const newGraph = {
-        nodes: updatedNodes,
+        nodes: finalNodes,
         glossary: updatedGlossary,
         globalConstraints: updatedConstraints
       };
@@ -452,8 +539,8 @@ export function WorkspaceProvider({ children }) {
       // Apply directly
       setGlossary(updatedGlossary);
       setGlobalConstraints(updatedConstraints);
-      setNodes(updatedNodes);
-      saveGraph(updatedGlossary, updatedConstraints, updatedNodes);
+      setNodes(finalNodes);
+      saveGraph(updatedGlossary, updatedConstraints, finalNodes);
 
       if (diff.hasChanges) {
         showDiffModal(diff, oldGraph, false);
@@ -729,6 +816,93 @@ function CustomModal({ type, message, defaultValue, onConfirm, onCancel, languag
       </div>
     </div>
   );
+}
+
+function isGlossaryChanged(oldGlossary, newGlossary) {
+  const oldKeys = Object.keys(oldGlossary || {}).sort();
+  const newKeys = Object.keys(newGlossary || {}).sort();
+  if (oldKeys.length !== newKeys.length) return true;
+  for (let i = 0; i < oldKeys.length; i++) {
+    if (oldKeys[i] !== newKeys[i]) return true;
+    if (oldGlossary[oldKeys[i]] !== newGlossary[newKeys[i]]) return true;
+  }
+  return false;
+}
+
+function isGlobalConstraintsChanged(oldConstraints, newConstraints) {
+  const oldSorted = [...(oldConstraints || [])].sort();
+  const newSorted = [...(newConstraints || [])].sort();
+  return JSON.stringify(oldSorted) !== JSON.stringify(newSorted);
+}
+
+function getAdjustedNodesWithTodoPropagation(oldNodes, newNodes) {
+  const oldNodesMap = new Map((oldNodes || []).map(n => [n.id, n]));
+  const directlyAffected = new Set();
+
+  for (const node of newNodes) {
+    const oldNode = oldNodesMap.get(node.id);
+    if (!oldNode) {
+      continue;
+    }
+
+    const oldDepsSorted = [...(oldNode.dependencies || [])].sort();
+    const newDepsSorted = [...(node.dependencies || [])].sort();
+    const depsChanged = JSON.stringify(oldDepsSorted) !== JSON.stringify(newDepsSorted);
+
+    const oldConstraints = oldNode.synthesis?.extractedConstraints || [];
+    const newConstraints = node.synthesis?.extractedConstraints || [];
+    const constraintsChanged = oldConstraints.length !== newConstraints.length ||
+      oldConstraints.some((c, idx) => c !== newConstraints[idx]);
+
+    const specChanged =
+      (node.name || '') !== (oldNode.name || '') ||
+      (node.produce || '') !== (oldNode.produce || '') ||
+      (node.vibeNotes || '') !== (oldNode.vibeNotes || '') ||
+      (node.synthesis?.intentSignal || '') !== (oldNode.synthesis?.intentSignal || '') ||
+      depsChanged ||
+      constraintsChanged ||
+      ((node.synthesis?.filePath || '') !== (oldNode.synthesis?.filePath || '') &&
+       !(oldNode.synthesis?.status !== 'completed' && node.synthesis?.status === 'completed' && !oldNode.synthesis?.filePath));
+
+    if (specChanged) {
+      directlyAffected.add(node.id);
+    }
+  }
+
+  if (directlyAffected.size === 0) {
+    return newNodes;
+  }
+
+  const allAffected = new Set(directlyAffected);
+  let addedNew = true;
+
+  while (addedNew) {
+    addedNew = false;
+    for (const node of newNodes) {
+      if (!allAffected.has(node.id)) {
+        const hasAffectedDep = (node.dependencies || []).some(depId => allAffected.has(depId));
+        if (hasAffectedDep) {
+          allAffected.add(node.id);
+          addedNew = true;
+        }
+      }
+    }
+  }
+
+  return newNodes.map(node => {
+    if (allAffected.has(node.id)) {
+      if (node.synthesis?.status !== 'todo') {
+        return {
+          ...node,
+          synthesis: {
+            ...(node.synthesis || {}),
+            status: 'todo'
+          }
+        };
+      }
+    }
+    return node;
+  });
 }
 
 function getGraphDiff(oldGraph, newGraph) {
