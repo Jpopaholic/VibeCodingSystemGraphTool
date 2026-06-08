@@ -3,7 +3,7 @@ name: Build and Release Plugins
 on:
   push:
     branches:
-      - 'v*' # Triggers when pushing branches matching v1.0.0, etc.
+      - 'release' # Triggers when pushing to the release branch
     tags:
       - 'v*' # Triggers when pushing tags matching v1.0.0, etc.
 
@@ -53,6 +53,7 @@ jobs:
           cp build/distributions/*.zip ../bin/
 
       - name: Create GitHub Release and Upload Assets
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
