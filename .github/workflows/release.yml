@@ -1,0 +1,62 @@
+name: Build and Release Plugins
+
+on:
+  push:
+    branches:
+      - 'v*' # Triggers when pushing branches matching v1.0.0, etc.
+    tags:
+      - 'v*' # Triggers when pushing tags matching v1.0.0, etc.
+
+permissions:
+  contents: write # Required for creating releases and uploading assets
+
+jobs:
+  build-and-release:
+    name: Build & Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Frontend & Root Dependencies
+        run: |
+          npm install
+          npm run webview-install
+
+      - name: Build Webview Frontend
+        run: |
+          npm run webview-build
+
+      - name: Create bin output folder
+        run: mkdir -p bin
+
+      - name: Package VS Code Extension
+        run: npx @vscode/vsce package -o bin/
+
+      - name: Package IntelliJ Plugin
+        run: |
+          cd intellij-plugin
+          chmod +x gradlew
+          ./gradlew buildPlugin
+          cp build/distributions/*.zip ../bin/
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            bin/*.vsix
+            bin/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -175,6 +175,19 @@ VibeGraph 支援多模式無縫相容，會自動偵測當前執行環境（`VS 
 
 在將插件安裝到您的 IDE 前，必須進行正式打包。專案已將輸出路徑統一規劃至根目錄的 `bin/` 目錄中。
 
+> [!TIP]
+> ### 🚀 快速開始：直接下載預建好的安裝包 (Quick Start)
+> 如果您**不需要**修改原始碼或自訂打包，請直接前往 **[GitHub Releases 頁面](https://github.com/Jpopaholic/VibeCodingSystemGraphTool/releases)** 下載最新釋出的預建安裝包：
+> * **VS Code** 擴充功能：下載 `vibegraph-*.vsix`。
+> * **Android Studio / IntelliJ** 插件：下載 `vibegraph-intellij-plugin-*.zip`。
+> 
+> 下載完成後，即可跳過下方所有「安裝與建置」步驟，直接跳轉至下方參考 **[VS Code 安裝](#2-vs-code-插件打包與安裝)** 或 **[Android Studio 安裝](#3-android-studio--intellij-插件打包與安裝)** 方法進行導入。
+
+> [!NOTE]
+> **環境前置準備 (Prerequisites)**：
+> * **自己打包或開發**：若您需要執行打包（如 `npm run package`）或進行原始碼開發，您的系統必須已安裝 **Node.js (建議 v18 以上) 與 npm**。
+> * **僅需導入安裝**：若您只是要將已下載或已編譯好的成品（`.vsix` 或 `.zip`）安裝到您的 IDE 中，則**不需要**安裝 Node.js。
+
 ### 1. 前置建置 (建置 Webview)
 在進行任何打包之前，請先確保前端依賴已安裝且 Webview 已正確建置：
 ```bash
