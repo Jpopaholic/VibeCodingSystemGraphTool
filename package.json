@@ -3,7 +3,8 @@
   "displayName": "VibeGraph",
   "description": "Visual constraint map and prompt compiler for Vibe Coding",
   "version": "0.0.1",
-  "publisher": "tttff",
+  "publisher": "jpopaholic",
+  "icon": "icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/Jpopaholic/VibeCodingSystemGraphTool.git"
