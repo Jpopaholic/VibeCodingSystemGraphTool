@@ -75,7 +75,8 @@
   "scripts": {
     "webview-install": "cd webview && npm install",
     "webview-build": "cd webview && npm run build",
-    "package": "npm run webview-build && npx @vscode/vsce package"
+    "package": "npm run webview-build && npx @vscode/vsce package",
+    "intellij-package": "npm run webview-build && cd intellij-plugin && ./gradlew buildPlugin"
   },
   "devDependencies": {
     "@types/vscode": "^1.60.0"

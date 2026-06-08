@@ -1,0 +1,59 @@
+<idea-plugin>
+    <id>com.vibegraph</id>
+    <name>VibeGraph</name>
+    <vendor email="support@vibegraph.com" url="https://github.com/Jpopaholic/VibeCodingSystemGraphTool">tttff</vendor>
+
+    <description><![CDATA[
+    VibeGraph 🚀 - Visual Constraint Map & Prompt Compiler for Vibe Coding.<br>
+    Provides a visual architecture map inside Android Studio to track file relationships, business glossaries, and global constraints. It compiles source files and notes into clean prompts to guide AI development.
+    ]]></description>
+
+    <!-- Require Platform module (base IDE feature set) -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Register Tool Window (sidebar) -->
+        <toolWindow id="VibeGraph"
+                    anchor="right"
+                    icon="AllIcons.Actions.ShowAsTree"
+                    factoryClass="com.vibegraph.VibeGraphToolWindowFactory"
+                    secondary="false"/>
+
+        <!-- Register Status Bar Widget -->
+        <statusBarWidgetFactory implementation="com.vibegraph.VibeGraphStatusBarWidgetFactory"
+                                 id="VibeGraphStatusBarWidget"
+                                 order="first"/>
+
+        <!-- Register Notification Group -->
+        <notificationGroup id="VibeGraph Notifications"
+                           displayType="BALLOON"
+                           key="vibegraph.notifications"/>
+    </extensions>
+
+    <actions>
+        <!-- Open VibeGraph Dashboard Action -->
+        <action id="VibeGraph.OpenMap"
+                class="com.vibegraph.actions.OpenGraphMapAction"
+                text="VibeGraph: Open Graph Map"
+                description="Open VibeGraph visual map dashboard"
+                icon="AllIcons.Actions.ShowAsTree">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+
+        <!-- Bootstrap Action -->
+        <action id="VibeGraph.Bootstrap"
+                class="com.vibegraph.actions.BootstrapAction"
+                text="VibeGraph: Bootstrap Project (產生初始架構)"
+                description="Prompt AI to generate initial system contract map"
+                icon="AllIcons.Actions.Lightning">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+            <!-- Add keyboard shortcuts -->
+            <keyboard-shortcut keymap="$default" first-keystroke="control shift I"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta shift I"/>
+        </action>
+    </actions>
+</idea-plugin>

@@ -21,6 +21,7 @@ export default function AIBox() {
 
   const { 
     isVsCode,
+    isIntelliJ,
     nodes,
     glossary, 
     updateGlossary, 
@@ -500,7 +501,7 @@ ${currentGraphJSON}
             display: 'inline-block',
             verticalAlign: 'middle'
           }}>
-            {isVsCode ? 'VS Code' : 'Web App'}
+            {isIntelliJ ? 'Android Studio' : (isVsCode ? 'VS Code' : 'Web App')}
           </span>
         </div>
         <select 

@@ -5,10 +5,25 @@ const WorkspaceContext = createContext(null);
 
 // 1. Safe VS Code API acquisition with browser fallback mock
 const isVsCode = typeof acquireVsCodeApi !== 'undefined';
+const isIntelliJ = typeof window.cefQuery !== 'undefined';
 
 const vscode = (() => {
   if (isVsCode) {
     return acquireVsCodeApi();
+  } else if (isIntelliJ) {
+    return {
+      postMessage: (message) => {
+        window.cefQuery({
+          request: JSON.stringify(message),
+          onSuccess: (response) => {
+            console.log('[IntelliJ Host Response]:', response);
+          },
+          onFailure: (errCode, errMsg) => {
+            console.error('[IntelliJ Host Error]:', errCode, errMsg);
+          }
+        });
+      }
+    };
   } else {
     console.warn('VibeGraph: Running in browser preview mode. Operations will be mocked.');
     return {
@@ -626,7 +641,8 @@ export function WorkspaceProvider({ children }) {
 
   return (
     <WorkspaceContext.Provider value={{
-      isVsCode,
+      isVsCode: isVsCode || isIntelliJ,
+      isIntelliJ,
       isInitialized,
       workspaceRoot,
       nodes,
