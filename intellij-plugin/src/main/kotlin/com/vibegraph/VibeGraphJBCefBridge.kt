@@ -14,9 +14,9 @@ import java.util.Locale
 
 class VibeGraphJBCefBridge(private val project: Project, private val browser: JBCefBrowser) {
     private val gson = GsonBuilder().setPrettyPrinting().create()
+    private val query = JBCefJSQuery.create(browser)
 
-    fun registerQueryHandler() {
-        val query = JBCefJSQuery.create(browser)
+    init {
         query.addHandler { request ->
             try {
                 val jsonRequest = JsonParser.parseString(request).asJsonObject
@@ -27,7 +27,9 @@ class VibeGraphJBCefBridge(private val project: Project, private val browser: JB
             }
             null
         }
+    }
 
+    fun injectQueryBridge() {
         // Inject window.cefQuery to handle frontend postMessages
         val injectScript = """
             window.cefQuery = function(payload) {
@@ -194,13 +196,24 @@ class VibeGraphJBCefBridge(private val project: Project, private val browser: JB
                             FileEditorManager.getInstance(project).openFile(virtualFile, true)
                         }
                     }
+                } else {
+                    val isZh = Locale.getDefault().language.startsWith("zh")
+                    val message = if (isZh) {
+                        "VibeGraph: 檔案尚不存在：$relPath"
+                    } else {
+                        "VibeGraph: File does not exist yet: $relPath"
+                    }
+                    val notificationGroup = com.intellij.notification.NotificationGroupManager.getInstance()
+                        .getNotificationGroup("VibeGraph Notifications")
+                    notificationGroup?.createNotification(message, com.intellij.notification.NotificationType.WARNING)
+                        ?.notify(project)
                 }
             }
         }
     }
 
     fun postMessageToWebview(jsonMessage: String) {
-        val script = "window.postMessage($jsonMessage, '*');"
+        val script = "if (window.onHostMessage) { window.onHostMessage($jsonMessage); } else { window.postMessage($jsonMessage, '*'); }"
         browser.cefBrowser.executeJavaScript(script, browser.cefBrowser.url, 0)
     }
 }

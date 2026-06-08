@@ -18,7 +18,7 @@ class BootstrapAction : AnAction() {
             "請描述您的系統願景 / Describe your system vision",
             "VibeGraph Bootstrap",
             Messages.getQuestionIcon(),
-            "例如：做一個多人連線井字遊戲",
+            "例如：做一個結合 IndexedDB 存檔的 Markdown 編輯器，且能匯出 PDF",
             null
         ) ?: return
 

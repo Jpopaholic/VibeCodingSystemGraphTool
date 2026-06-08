@@ -75,13 +75,11 @@
   "scripts": {
     "webview-install": "cd webview && npm install",
     "webview-build": "cd webview && npm run build",
-    "package": "npm run webview-build && npx @vscode/vsce package",
-    "intellij-package": "npm run webview-build && cd intellij-plugin && ./gradlew buildPlugin"
+    "package": "npm run webview-build && mkdir -p bin && npx @vscode/vsce package -o bin/",
+    "intellij-package": "npm run webview-build && cd intellij-plugin && ./gradlew buildPlugin && mkdir -p ../bin && cp build/distributions/*.zip ../bin/ && ./gradlew clean && rm -rf src/main/resources/webview-assets"
   },
   "devDependencies": {
-    "@types/vscode": "^1.60.0"
-  },
-  "dependencies": {
-    "package": "^1.0.1"
+    "@types/vscode": "^1.60.0",
+    "@vscode/vsce": "^3.2.1"
   }
 }

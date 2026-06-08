@@ -17,8 +17,8 @@ class VibeGraphStatusBarWidgetFactory : StatusBarWidgetFactory {
 
     override fun createWidget(project: Project): StatusBarWidget {
         return object : StatusBarWidget, StatusBarWidget.TextPresentation {
-            override fun getId(): String = "VibeGraphStatusBarWidget"
-            override fun getPresentation(): StatusBarWidget.Presentation = this
+            override fun ID(): String = "VibeGraphStatusBarWidget"
+            override fun getPresentation(): StatusBarWidget.WidgetPresentation? = this
             override fun install(statusBar: StatusBar) {}
             override fun dispose() {}
 

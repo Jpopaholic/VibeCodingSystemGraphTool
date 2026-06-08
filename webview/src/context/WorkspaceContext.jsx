@@ -5,7 +5,7 @@ const WorkspaceContext = createContext(null);
 
 // 1. Safe VS Code API acquisition with browser fallback mock
 const isVsCode = typeof acquireVsCodeApi !== 'undefined';
-const isIntelliJ = typeof window.cefQuery !== 'undefined';
+const isIntelliJ = typeof window.cefQuery !== 'undefined' || window.location.search.includes('ide=intellij');
 
 const vscode = (() => {
   if (isVsCode) {
@@ -13,15 +13,30 @@ const vscode = (() => {
   } else if (isIntelliJ) {
     return {
       postMessage: (message) => {
-        window.cefQuery({
-          request: JSON.stringify(message),
-          onSuccess: (response) => {
-            console.log('[IntelliJ Host Response]:', response);
-          },
-          onFailure: (errCode, errMsg) => {
-            console.error('[IntelliJ Host Error]:', errCode, errMsg);
+        const send = () => {
+          if (typeof window.cefQuery !== 'undefined') {
+            window.cefQuery({
+              request: JSON.stringify(message),
+              onSuccess: (response) => {
+                console.log('[IntelliJ Host Response]:', response);
+              },
+              onFailure: (errCode, errMsg) => {
+                console.error('[IntelliJ Host Error]:', errCode, errMsg);
+              }
+            });
+            return true;
           }
-        });
+          return false;
+        };
+
+        if (!send()) {
+          const interval = setInterval(() => {
+            if (send()) {
+              clearInterval(interval);
+            }
+          }, 50);
+          setTimeout(() => clearInterval(interval), 5000);
+        }
       }
     };
   } else {
@@ -304,9 +319,15 @@ export function WorkspaceProvider({ children }) {
     };
 
     window.addEventListener('message', handleMessage);
+    window.onHostMessage = (message) => {
+      handleMessage({ data: message });
+    };
     vscode.postMessage({ command: 'ready' });
 
-    return () => window.removeEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      delete window.onHostMessage;
+    };
   }, []);
 
   // 3. Centralized Save Graph

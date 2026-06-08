@@ -11,3 +11,13 @@ webview/dist/
 # OS metadata files
 .DS_Store
 Thumbs.db
+
+# Gradle and IntelliJ build intermediate files
+.gradle/
+build/
+**/build/
+**/.gradle/
+intellij-plugin/.idea/
+
+# Package outputs
+/bin/

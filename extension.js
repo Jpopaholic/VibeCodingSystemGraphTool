@@ -20,7 +20,7 @@ function activate(context) {
   const bootstrapDisposable = vscode.commands.registerCommand('vibegraph.bootstrap', async () => {
     const goal = await vscode.window.showInputBox({
       prompt: '請描述您的系統願景 / Describe your system vision',
-      placeHolder: '例如：做一個多人連線井字遊戲',
+      placeHolder: '例如：做一個結合 IndexedDB 存檔的 Markdown 編輯器，且能匯出 PDF',
       ignoreFocusOut: true
     });
     if (!goal) return;
@@ -266,50 +266,23 @@ function activate(context) {
  * @param {vscode.ExtensionContext} context
  */
 function getWebviewContent(webview, context) {
-  const distDir = path.join(context.extensionPath, 'webview', 'dist');
-  const assetsDir = path.join(distDir, 'assets');
+  const htmlPath = path.join(context.extensionPath, 'webview', 'dist', 'index.html');
 
-  let jsFile = '';
-  let cssFile = '';
-
-  if (fs.existsSync(assetsDir)) {
-    const files = fs.readdirSync(assetsDir);
-    const mainJs = files.find(f => f.endsWith('.js'));
-    const mainCss = files.find(f => f.endsWith('.css'));
-    if (mainJs) jsFile = mainJs;
-    if (mainCss) cssFile = mainCss;
+  if (fs.existsSync(htmlPath)) {
+    return fs.readFileSync(htmlPath, 'utf8');
   }
 
-  if (!jsFile) {
-    // Fallback if not compiled yet
-    return `<!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: sans-serif; padding: 20px; color: #ccc; background: #1e1e1e; }
-          </style>
-        </head>
-        <body>
-          <h2>VibeGraph Webview Build Missing</h2>
-          <p>Please compile the webview assets by running <code>npm run webview-build</code> in the extension directory first.</p>
-        </body>
-      </html>`;
-  }
-
-  const jsUri = webview.asWebviewUri(vscode.Uri.file(path.join(assetsDir, jsFile)));
-  const cssUri = webview.asWebviewUri(vscode.Uri.file(path.join(assetsDir, cssFile)));
-
+  // Fallback if not compiled yet
   return `<!DOCTYPE html>
-    <html lang="en">
+    <html>
       <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>VibeGraph</title>
-        <link rel="stylesheet" href="${cssUri}" />
+        <style>
+          body { font-family: sans-serif; padding: 20px; color: #ccc; background: #1e1e1e; }
+        </style>
       </head>
       <body>
-        <div id="root"></div>
-        <script type="module" src="${jsUri}"></script>
+        <h2>VibeGraph Webview Build Missing</h2>
+        <p>Please compile the webview assets by running <code>npm run webview-build</code> in the extension directory first.</p>
       </body>
     </html>`;
 }
