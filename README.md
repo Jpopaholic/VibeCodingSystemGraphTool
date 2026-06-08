@@ -56,8 +56,8 @@ VibeGraph 支援多模式無縫相容，會自動偵測當前執行環境（`VS 
 ├── .vscode/
 │   └── launch.json         # VS Code 沙盒偵錯啟動配置
 ├── bin/                    # 統一打包輸出目錄 (已設為 gitignore)
-│   ├── vibegraph-0.0.1.vsix                 # VS Code 插件正式包
-│   └── vibegraph-intellij-plugin-0.0.1.zip # IntelliJ 插件正式包
+│   ├── vibegraph-*.vsix                 # VS Code 插件正式包
+│   └── vibegraph-intellij-plugin-*.zip # IntelliJ 插件正式包
 ├── intellij-plugin/        # IntelliJ / Android Studio 插件專案
 │   ├── src/main/kotlin/    # Kotlin 後端邏輯與 JBCef 橋接
 │   └── build.gradle.kts    # Gradle 建置設定
@@ -190,14 +190,14 @@ npm run webview-build
   ```bash
   npm run package
   ```
-  這會自動建置前端，並使用內建的打包工具生成 `bin/vibegraph-0.0.1.vsix` 檔案。
+  這會自動建置前端，並使用內建的打包工具生成 `bin/vibegraph-*.vsix` 檔案。
 * **安裝方法 A：編輯器介面安裝**：
-  開啟 VS Code / Antigravity IDE，進入左側「Extensions (擴充功能)」面板 (`Ctrl+Shift+X`)，點擊面板右上角的 `...` 選擇 **「Install from VSIX... (從 VSIX 安裝...)」**，並選取 `bin/vibegraph-0.0.1.vsix`。
+  開啟 VS Code / Antigravity IDE，進入左側「Extensions (擴充功能)」面板 (`Ctrl+Shift+X`)，點擊面板右上角的 `...` 選擇 **「Install from VSIX... (從 VSIX 安裝...)」**，並選取 `bin/vibegraph-*.vsix`。
   *(💡 提示：若部分衍生 IDE 簡化了介面而找不到左側 Extensions 按鈕，您可直接按下 **`Ctrl+Shift+P`** 喚出命令列，輸入並點選 `Install from VSIX` 進行安裝！)*
 * **安裝方法 B：命令列安裝 (CLI)**：
   在終端機中執行：
   ```bash
-  code --install-extension bin/vibegraph-0.0.1.vsix
+  code --install-extension bin/vibegraph-*.vsix
   ```
 
 ### 3. Android Studio / IntelliJ 插件打包與安裝
@@ -206,12 +206,12 @@ npm run webview-build
   npm run intellij-package
   ```
   *(該指令會自動建置 Webview、編譯 Kotlin 插件代碼，將生成的 `.zip` 安裝包複製到 `bin/` 目錄中，並自動清理打包產生的中間產物。)*
-  這會生成例如 `bin/vibegraph-intellij-plugin-0.0.1.zip` 檔案。
+  這會生成例如 `bin/vibegraph-intellij-plugin-*.zip` 檔案。
 * **安裝方法**：
   1. 開啟 Android Studio / IntelliJ IDEA。
   2. 進入 **Preferences / Settings -> Plugins**。
   3. 點擊右上角的 **⚙️ (齒輪圖示) -> Install Plugin from Disk...**。
-  4. 選擇 `bin/vibegraph-intellij-plugin-0.0.1.zip` 檔案，安裝並重新啟動 IDE 即可！
+  4. 選擇 `bin/vibegraph-intellij-plugin-*.zip` 檔案，安裝並重新啟動 IDE 即可！
 
 ---
 

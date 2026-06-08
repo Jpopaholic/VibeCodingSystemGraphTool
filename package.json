@@ -2,7 +2,7 @@
   "name": "vibegraph",
   "displayName": "VibeGraph",
   "description": "Visual constraint map and prompt compiler for Vibe Coding",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "publisher": "jpopaholic",
   "icon": "icon.png",
   "repository": {
