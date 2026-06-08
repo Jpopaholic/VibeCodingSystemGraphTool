@@ -5,7 +5,18 @@ plugins {
 }
 
 group = "com.vibegraph"
-version = "1.0.1"
+
+// Dynamically read version from the root package.json (Single Source of Truth)
+version = run {
+    val packageJson = file("../package.json")
+    if (packageJson.exists()) {
+        val match = "\"version\":\\s*\"([^\"]+)\"".toRegex().find(packageJson.readText())
+        match?.groupValues?.get(1) ?: "1.0.0"
+    } else {
+        "1.0.0"
+    }
+}
+
 repositories {
     mavenCentral()
 }
