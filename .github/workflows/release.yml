@@ -70,5 +70,5 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: 'vibecodingsystemgraphtool'
           directory: 'webview/dist'
-          gitBranch: 'main'
+          gitBranch: 'release'
 
