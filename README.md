@@ -48,7 +48,7 @@ VibeGraph 支援多模式無縫相容，會自動偵測當前執行環境（`VS 
    - **自動存檔**：地圖架構與變更會自動即時儲存至瀏覽器的 `localStorage` 中（鍵值為 `vibegraph_system_graph`），關閉網頁亦能保留架構。
    - **匯入與匯出**：左側「AI 協同工具箱」下提供 **「匯出系統架構 JSON 📤」** 與 **「匯入 / 貼上系統架構 JSON 📥」** 按鈕，方便下載與載入 `system-graph.json` 檔案。
    - **🚀 線上免安裝版 (Online Live Demo)**：
-     如果您不想在本地執行開發伺服器，可以直接訪問 **[VibeGraph 網頁版（點選即開即用）](https://<您的-cloudflare-pages-網址>.pages.dev)** 立即在瀏覽器中開啟地圖規劃！*(註：線上版會自動將資料持久化至瀏覽器 localStorage，亦可隨時匯出 JSON 保存。)*
+     如果您不想在本地執行開發伺服器，可以直接訪問 **[VibeGraph 網頁版（點選即開即用）](https://vibecodingsystemgraphtool.pages.dev)** 立即在瀏覽器中開啟地圖規劃！*(註：線上版會自動將資料持久化至瀏覽器 localStorage，亦可隨時匯出 JSON 保存。)*
    - **💡 自行部署至 Cloudflare Pages 指引**：
      > [!TIP]
      > 您可以非常輕鬆地將此獨立 Web App 部署至 **Cloudflare Pages** 供在線訪問。請在 Cloudflare Pages 面板點擊 **Create a project -> Connect to Git** 關聯本倉庫，並填入以下設定：

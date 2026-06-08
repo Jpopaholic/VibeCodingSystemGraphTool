@@ -61,3 +61,13 @@ jobs:
             bin/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy Web App to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: 'vibecodingsystemgraphtool'
+          directory: 'webview/dist'
+          gitBranch: ${{ github.ref_name }}
+
